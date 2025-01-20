@@ -1,5 +1,5 @@
 import pytest
-from stewart.models import Project
+from stuart.models import Project
 
 def test_create_project(session, project_factory):
     # Create project instance

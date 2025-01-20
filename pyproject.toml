@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "stewart"
+name = "stuart"
 version = "0.1.0"
-description = "stewart acts as an autonomous agent to drive code generation."
+description = "stuart acts as an autonomous agent to drive code generation."
 authors = ["Ethan Knox <ethan@pirate.baby>"]
 
 [tool.poetry.dependencies]
@@ -15,7 +15,7 @@ factory-boy = "^3.3.0"
 pytest-cov = "^4.1.0"
 
 [tool.poetry.scripts]
-stewart = "stewart.cli:main"
+stuart = "stuart.cli:main"
 
 [build-system]
 requires = ["poetry-core"]
@@ -24,7 +24,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
-addopts = "--cov=stewart --cov-report=term-missing"
+addopts = "--cov=stuart --cov-report=term-missing"
 
 [tool.logging]
 version = 1

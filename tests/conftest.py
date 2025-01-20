@@ -3,7 +3,7 @@ import pytest
 import factory
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import Session
-from stewart.models import Project, Base
+from stuart.models import Project, Base
 
 class ProjectFactory(factory.Factory):
     """Factory for creating Project instances in tests."""

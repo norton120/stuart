@@ -1,5 +1,5 @@
 from click.testing import CliRunner
-from stewart.cli import cli
+from stuart.cli import cli
 
 def test_prompt_command():
     runner = CliRunner()

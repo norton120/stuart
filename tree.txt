@@ -1,10 +1,10 @@
-stewart/
+stuart/
 ├── .gitignore
 ├── CONTRIBUTING.txt
 ├── Dockerfile
 ├── LICENSE
 ├── pyproject.toml
-├── stewart/
+├── stuart/
 │   ├── models.py
 │   └── cli.py
 └── tests/
