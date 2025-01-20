@@ -12,6 +12,7 @@ click = "~=8.1"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"
 factory-boy = "^3.3.0"
+pytest-cov = "^4.1.0"
 
 [tool.poetry.scripts]
 stewart = "stewart.cli:main"
@@ -23,3 +24,20 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
+addopts = "--cov=stewart --cov-report=term-missing"
+
+[tool.logging]
+version = 1
+disable_existing_loggers = false
+
+[tool.logging.formatters.default]
+format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+[tool.logging.handlers.console]
+class = "logging.StreamHandler"
+formatter = "default"
+level = "INFO"
+
+[tool.logging.root]
+level = "INFO"
+handlers = ["console"]

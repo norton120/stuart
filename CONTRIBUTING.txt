@@ -1,0 +1,25 @@
+Guidelines for LLMs (and Humans) When Contributing
+================
+
+Process
+-------
+When given a task:
+1. first, determine if writing or updating code is the most likely solution/answer. If it is not, say so and do not edit any code.
+2. If coding is called for, start with tests. You may either modify existing tests to include your new test case, or create new tests.
+3. Once the tests are updated and failing (because you haven't written the code yet), then write the code.
+4. Once tests are passing, refactor to DRY out, make more legible, and better follow these guidelines.
+5. Any time you add or remove any file, make sure to update the tree.txt file.
+
+Refactoring
+-----------
+When refactoring code:
+1. Type hints should be used whenever possible.
+2. Don't catch bare exceptions - if you don't know what you are catching, let it rise.
+3. Make sure all code has appropriate logging statements.
+
+
+Module/File Guidelines
+------------
+
+Individual modules and files will have guidelines specific to them. Respect these guidelines.
+

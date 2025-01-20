@@ -1,8 +1,12 @@
 stewart/
 ├── .gitignore
+├── CONTRIBUTING.txt
 ├── Dockerfile
 ├── pyproject.toml
 ├── stewart/
-│   └── models.py
+│   ├── models.py
+│   └── cli.py
 └── tests/
-    └── conftest.py
+    ├── conftest.py
+    ├── test_cli.py
+    └── test_models.py

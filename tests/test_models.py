@@ -1,4 +1,3 @@
-
 import pytest
 from stewart.models import Project
 
