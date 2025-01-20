@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "stewart"
+version = "0.1.0"
+description = "stewart acts as an autonomous agent to drive code generation."
+authors = ["Ethan Knox <ethan@pirate.baby>"]
+
+[tool.poetry.dependencies]
+python = "~=3.13"
+sqlalchemy = "~=2.0.37"
+click = "~=8.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+factory-boy = "^3.3.0"
+
+[tool.poetry.scripts]
+stewart = "stewart.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
