@@ -3,6 +3,7 @@ stuart/
 ├── CONTRIBUTING.txt
 ├── Dockerfile
 ├── LICENSE
+├── README.md
 ├── pyproject.toml
 ├── stuart/
 │   ├── models.py
