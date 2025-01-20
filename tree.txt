@@ -2,6 +2,7 @@ stewart/
 ├── .gitignore
 ├── CONTRIBUTING.txt
 ├── Dockerfile
+├── LICENSE
 ├── pyproject.toml
 ├── stewart/
 │   ├── models.py
