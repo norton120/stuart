@@ -1,19 +1,13 @@
 from typing import Optional
 import click
 import logging
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 class StewartCLI:
-    """Main CLI handler for Stewart operations.
+    """Main CLI handler for Stewart operations."""
 
-    Attributes:
-        workspace: Directory where Stewart will operate
-    """
-
-    def __init__(self, workspace: Optional[Path] = None) -> None:
-        self.workspace = workspace or Path.cwd()
+    def __init__(self) -> None:
         self._setup_logging()
 
     def _setup_logging(self) -> None:
@@ -24,12 +18,10 @@ class StewartCLI:
         )
 
 @click.group()
-@click.option('--workspace', type=click.Path(exists=True, file_okay=False),
-              help="Workspace directory for Stewart operations")
 @click.pass_context
-def cli(ctx: click.Context, workspace: Optional[str] = None) -> None:
+def cli(ctx: click.Context) -> None:
     """Stewart CLI - AI-driven code generation tool."""
-    ctx.obj = StewartCLI(Path(workspace) if workspace else None)
+    ctx.obj = StewartCLI()
 
 @cli.command()
 @click.argument('prompt_text', type=str)
@@ -43,8 +35,7 @@ def prompt(obj: StewartCLI, prompt_text: str) -> None:
     Raises:
         click.Abort: If there's an error during execution
     """
-    logger.info(f"Starting prompt execution in {obj.workspace}")
-    click.echo(f"Working in: {obj.workspace}")
+    logger.info("Starting prompt execution")
     click.echo(f"Executing prompt: {prompt_text}")
 
     if click.confirm("Do you want to proceed?", default=True):

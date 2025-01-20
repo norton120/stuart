@@ -4,9 +4,14 @@ Guidelines for LLMs (and Humans) When Contributing
 Process
 -------
 When given a task:
-1. first, determine if writing or updating code is the most likely solution/answer. If it is not, say so and do not edit any code.
+1. First, STOP and check if this can be fixed without code changes:
+   - Could deleting a stale cache, or rebuilding an image, or restarting a service possibly solve the problem?
+   - Could the problem be caused by a network/connectivity issue?
+   If so, suggest trying these FIRST and wait for confirmation before making any code changes.
+
 2. If coding is called for, start with tests. You may either modify existing tests to include your new test case, or create new tests.
 3. Once the tests are updated and failing (because you haven't written the code yet), then write the code.
+4. Only add/update code nessesary to complete the specific task given.
 4. Once tests are passing, refactor to DRY out, make more legible, and better follow these guidelines.
 5. Any time you add or remove any file, make sure to update the tree.txt file.
 
