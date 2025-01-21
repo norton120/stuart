@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Any, Type, TypeVar, cast
 import logging
 from pathlib import Path
 from datetime import datetime, UTC
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
-from sqlalchemy import String, Text, DateTime, event, ForeignKey, Column, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session, sessionmaker
+from sqlalchemy import String, Text, DateTime, event, ForeignKey, Column, Integer, UniqueConstraint, select, create_engine
+from sqlalchemy.dialects.sqlite import insert
 from treelib import Tree
 
 logger = logging.getLogger(__name__)
@@ -18,8 +19,11 @@ logger = logging.getLogger(__name__)
 
 """
 
+T = TypeVar('T', bound='Base')
+
 class Base(DeclarativeBase):
     """Base class for all models providing common fields."""
+    __abstract__ = True
 
     id: Mapped[int] = mapped_column(primary_key=True,
         doc="Unique identifier for all model instances")
@@ -30,6 +34,82 @@ class Base(DeclarativeBase):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
         doc="Timestamp when the record was last updated")
+
+    @classmethod
+    def upsert(cls: Type[T], session: Session, **kwargs: Any) -> tuple[T, bool]:
+        """
+        Get an existing record by name or create a new one.
+
+        Args:
+            session: SQLAlchemy session
+            **kwargs: Fields to set on the model
+
+        Returns:
+            Tuple (instance, created) of the model, either updated or newly created
+        """
+        # Check for name field which all our models use as primary identifier
+        if 'name' not in kwargs:
+            logger.warning("No name field provided for %s upsert, falling back to insert", cls.__name__)
+            instance = cls(**kwargs)
+            session.add(instance)
+            return instance, True
+
+        # Try to find existing record by name
+        instance = session.execute(select(cls).filter_by(name=kwargs['name'])).scalar_one_or_none()
+
+        if instance:
+            logger.info("Updating existing %s: %s", cls.__name__, kwargs['name'])
+            for key, value in kwargs.items():
+                setattr(instance, key, value)
+            created = False
+        else:
+            logger.info("Creating new %s: %s", cls.__name__, kwargs['name'])
+            instance = cls(**kwargs)
+            session.add(instance)
+            created = True
+
+        return instance, created
+
+    @classmethod
+    def get_or_create(cls: Type[T], session: Session, **kwargs: Any) -> tuple[T, bool]:
+        """
+        Get an existing record by name or create a new one.
+        Does not update existing records.
+
+        Args:
+            session: SQLAlchemy session
+            **kwargs: Fields to set on the model
+
+        Returns:
+            Tuple of (instance, created) where created is True if a new record was created
+        """
+        if 'name' not in kwargs:
+            logger.warning("No name field provided for %s get_or_create, falling back to create", cls.__name__)
+            instance = cls(**kwargs)
+            session.add(instance)
+            return instance, True
+
+        instance = session.execute(select(cls).filter_by(name=kwargs['name'])).scalar_one_or_none()
+
+        if instance:
+            logger.debug("Found existing %s: %s", cls.__name__, kwargs['name'])
+            return instance, False
+
+        logger.info("Creating new %s: %s", cls.__name__, kwargs['name'])
+        instance = cls(**kwargs)
+        session.add(instance)
+        session.flush()
+        return instance, True
+
+
+
+def get_session() -> Session:
+    """Get a database session for stuart."""
+    # Add session management
+    engine = create_engine("sqlite:///stuart.db")
+    Base.metadata.create_all(engine)
+    SessionLocal = sessionmaker(bind=engine)
+    return SessionLocal()
 
 class Project(Base):
     """The software project that is being updated or maintained.
@@ -54,13 +134,13 @@ class Project(Base):
         tree.create_node(f"{self.name}/", "root")
 
         # Get all files and sort by path
-        files = session.query(File).order_by(File.filename).all()
+        files = session.query(File).order_by(File.name).all()
 
         # Track processed paths to handle directories
         processed = {"root"}
 
         for file in files:
-            parts = Path(file.filename).parts
+            parts = Path(file.name).parts
             current = "root"
 
             # Add directory nodes
@@ -90,7 +170,7 @@ class File(Base):
     """
     __tablename__ = 'file'
 
-    filename: Mapped[str] = mapped_column(String(255),
+    name: Mapped[str] = mapped_column(String(255),
         nullable=False, unique=True, index=True,
         doc="Full path of the file relative to project root")
     suffix: Mapped[str] = mapped_column(String(32),
@@ -163,6 +243,13 @@ class FileImport(Base):
 
     file = relationship("File", back_populates="imports")
 
+    # Update unique constraint to use ON CONFLICT DO NOTHING
+    __table_args__ = (
+        UniqueConstraint('file_id', 'imported', 'from_path', 'alias',
+                        name='unique_import',
+                        sqlite_on_conflict='IGNORE'),
+    )
+
     def __repr__(self) -> str:
         statement = f"import {self.imported}"
         if self.from_path:
@@ -208,8 +295,8 @@ def render_package(session: Session, root_path: str | Path) -> None:
 
     # Render individual files with their functions
     for file in session.query(File).all():
-        logger.info("Rendering file %s", file.filename)
-        file_path = root / file.filename
+        logger.info("Rendering file %s", file.name)
+        file_path = root / file.name
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         content = [

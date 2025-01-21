@@ -28,18 +28,18 @@ def test_create_file(session, file_factory):
 
     # Verify it was saved
     saved_file = session.get(file.__class__, file.id)
-    assert saved_file.filename == "test/path/file_0.py"
+    assert saved_file.name == "test/path/file_0.py"
     assert saved_file.suffix == ".py"
     assert saved_file.description == "A sample Python file"
 
 def test_file_unique_filename(session, file_factory):
     # Create and save first file
-    file1 = file_factory(filename="same/path/file.py")
+    file1 = file_factory(name="same/path/file.py")
     session.add(file1)
     session.commit()
 
-    # Try to create second file with same filename
-    file2 = file_factory(filename="same/path/file.py")
+    # Try to create second file with same name
+    file2 = file_factory(name="same/path/file.py")
     session.add(file2)
 
     # Should raise integrity error due to unique constraint
@@ -103,7 +103,7 @@ def test_cnode_unique_name(session, cnode_factory):
 
 def test_create_fnode(session, file_factory, fnode_factory):
     # Create file first
-    file = file_factory(filename="test/path/specific_file.py")
+    file = file_factory(name="test/path/specific_file.py")
 
     # Create fnode instance with specific file
     fnode = fnode_factory(file=file)
@@ -118,7 +118,7 @@ def test_create_fnode(session, file_factory, fnode_factory):
     assert saved_fnode.name == "function_0"
     assert saved_fnode.description == "A sample function"
     assert saved_fnode.body == "def sample_function():\n    return True"
-    assert saved_fnode.file.filename == "test/path/specific_file.py"
+    assert saved_fnode.file.name == "test/path/specific_file.py"
     assert saved_fnode.return_type == "bool"  # Verify return type
 
 def test_file_functions_relationship(session, file_factory, fnode_factory):
@@ -162,7 +162,7 @@ def test_render_package(
 
     # Create sample file with imports and functions
     file = file_factory(
-        filename="src/users.py",
+        name="src/users.py",
         description="User management module"
     )
     session.add(file)
@@ -233,7 +233,7 @@ def test_render_package_empty(session):
 
 def test_render_package_nested_directories(session, file_factory):
     """Test package rendering with deeply nested directories."""
-    file = file_factory(filename="deep/nested/path/module.py")
+    file = file_factory(name="deep/nested/path/module.py")
     session.add(file)
     session.commit()
 
@@ -249,9 +249,9 @@ def test_project_tree(session, project_factory, file_factory, fnode_factory):
 
     # Create sample file structure
     files = [
-        file_factory(filename="src/main.py"),
-        file_factory(filename="src/utils/helpers.py"),
-        file_factory(filename="tests/test_main.py")
+        file_factory(name="src/main.py"),
+        file_factory(name="src/utils/helpers.py"),
+        file_factory(name="tests/test_main.py")
     ]
     session.add_all(files)
 
@@ -281,3 +281,49 @@ def test_project_tree(session, project_factory, file_factory, fnode_factory):
         └── test_main_function()"""
 
     assert tree.strip() == expected.strip()
+
+def test_file_import_unique(session, file_factory, file_import_factory):
+    """Test that duplicate imports are silently ignored."""
+    file = file_factory()
+    session.add(file)
+
+    # Create first import
+    import1 = file_import_factory(
+        file=file,
+        imported="typing",
+        from_path="collections",
+        alias="t"
+    )
+    session.add(import1)
+    session.commit()
+
+    # Try to create duplicate import - should be silently ignored
+    import2 = file_import_factory(
+        file=file,
+        imported="typing",
+        from_path="collections",
+        alias="t"
+    )
+    session.add(import2)
+    session.commit()  # Should not raise
+
+    # Verify only one import exists
+    file = session.get(File, file.id)
+    assert len(file.imports) == 1
+    assert file.imports[0].imported == "typing"
+    assert file.imports[0].from_path == "collections"
+    assert file.imports[0].alias == "t"
+
+    # Different values should create new imports
+    import3 = file_import_factory(
+        file=file,
+        imported="typing",
+        from_path="collections",
+        alias="different"  # Only alias is different
+    )
+    session.add(import3)
+    session.commit()
+
+    # Verify new import was added
+    file = session.get(File, file.id)
+    assert len(file.imports) == 2

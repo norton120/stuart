@@ -25,7 +25,7 @@ class FileFactory(factory.Factory):
     class Meta:
         model = File
 
-    filename = factory.Sequence(lambda n: f"test/path/file_{n}.py")
+    name = factory.Sequence(lambda n: f"test/path/file_{n}.py")
     suffix = ".py"
     description = "A sample Python file"
 
