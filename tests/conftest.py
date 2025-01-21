@@ -4,6 +4,9 @@ import factory
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import Session
 from stuart.models import Project, File, Typing, CNode, FNode, Base
+import vcr
+
+# Remove vcr configuration since we're handling it in test_prompts.py
 
 class ProjectFactory(factory.Factory):
     """Factory for creating Project instances in tests."""

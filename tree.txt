@@ -6,11 +6,12 @@ stuart/
 ├── README.md
 ├── pyproject.toml
 ├── stuart/
+│   ├── __init__.py
 │   ├── models.py
-│   ├── tools.py
+│   ├── prompts.py
+│   ├── typing.py
 │   └── cli.py
 └── tests/
     ├── conftest.py
     ├── test_cli.py
-    ├── test_models.py
-    └── test_tools.py
+    └── test_models.py

@@ -4,10 +4,11 @@ Guidelines for LLMs (and Humans) When Contributing
 Process
 -------
 When given a task:
-1. First, STOP and check if this can be fixed without code changes:
-   - Could deleting a stale cache, or rebuilding an image, or restarting a service possibly solve the problem?
-   - Could the problem be caused by a network/connectivity issue?
-   If so, suggest trying these FIRST and wait for confirmation before making any code changes.
+1. First, STOP and check if there is a solution without code changes!
+   - If rebuilding the Docker image could solve the issue, suggest that first.
+   - If purging a cache or restarting a servicve could solve the issue, suggest that first.
+   - If a network issue (like no internet connection) could be the problem, suggest the user check that first.
+   Do NOT change code until you have confirmed it is not a simple issue like above!
 
 2. If coding is called for, start with tests. You may either modify existing tests to include your new test case, or create new tests.
 3. Once the tests are updated and failing (because you haven't written the code yet), then write the code.
@@ -22,6 +23,8 @@ When refactoring code:
 1. Type hints should be used whenever possible.
 2. Don't catch bare exceptions - if you don't know what you are catching, let it rise.
 3. Make sure all code has appropriate logging statements.
+4. Don't use f strings in logging, use the % operator.
+
 
 Structure
 ---------
