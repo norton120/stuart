@@ -70,3 +70,15 @@ class Typing(Base):
     body: Mapped[str] = mapped_column(Text,
         nullable=False,
         doc="The actual type definition code")
+
+class CNode(Base):
+    """Configuration node for storing constants.
+    """
+    __tablename__ = 'c_node'
+
+    name: Mapped[str] = mapped_column(String(255),
+        nullable=False, unique=True, index=True,
+        doc="Unique variable name for this constant")
+    value: Mapped[str] = mapped_column(Text,
+        nullable=False,
+        doc="Value for this constant")

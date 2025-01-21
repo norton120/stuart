@@ -3,7 +3,7 @@ import pytest
 import factory
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import Session
-from stuart.models import Project, File, Typing, Base
+from stuart.models import Project, File, Typing, CNode, Base
 
 class ProjectFactory(factory.Factory):
     """Factory for creating Project instances in tests."""
@@ -36,6 +36,15 @@ class TypingFactory(factory.Factory):
     description = "A custom type definition"
     body = "type CustomType = string | number;"
 
+class CNodeFactory(factory.Factory):
+    """Factory for creating CNode instances in tests."""
+
+    class Meta:
+        model = CNode
+
+    name = factory.Sequence(lambda n: f"config.key.{n}")
+    value = factory.Sequence(lambda n: f"value_{n}")
+
 @pytest.fixture
 def project_factory() -> Type[ProjectFactory]:
     return ProjectFactory
@@ -47,6 +56,10 @@ def file_factory() -> Type[FileFactory]:
 @pytest.fixture
 def typing_factory() -> Type[TypingFactory]:
     return TypingFactory
+
+@pytest.fixture
+def cnode_factory() -> Type[CNodeFactory]:
+    return CNodeFactory
 
 @pytest.fixture
 def engine() -> Engine:

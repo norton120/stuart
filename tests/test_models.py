@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy.exc import IntegrityError
-from stuart.models import Project, File, Typing
+from stuart.models import Project, File, Typing, CNode
 
 def test_create_project(session, project_factory):
     # Create project instance
@@ -66,6 +66,33 @@ def test_typing_unique_name(session, typing_factory):
     # Try to create second typing with same name
     typing2 = typing_factory(name="DuplicateType")
     session.add(typing2)
+
+    # Should raise integrity error due to unique constraint
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+def test_create_cnode(session, cnode_factory):
+    # Create cnode instance
+    cnode = cnode_factory()
+
+    # Save to database
+    session.add(cnode)
+    session.commit()
+
+    # Verify it was saved
+    saved_cnode = session.get(cnode.__class__, cnode.id)
+    assert saved_cnode.name == "config.key.0"
+    assert saved_cnode.value == "value_0"
+
+def test_cnode_unique_name(session, cnode_factory):
+    # Create and save first cnode
+    cnode1 = cnode_factory(name="unique.key")
+    session.add(cnode1)
+    session.commit()
+
+    # Try to create second cnode with same name
+    cnode2 = cnode_factory(name="unique.key")
+    session.add(cnode2)
 
     # Should raise integrity error due to unique constraint
     with pytest.raises(IntegrityError):
