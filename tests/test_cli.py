@@ -1,5 +1,6 @@
 from click.testing import CliRunner
-from stuart.cli import cli
+from unittest.mock import patch, Mock
+from stuart.cli import cli, StuartCLI
 
 def test_prompt_command():
     runner = CliRunner()
@@ -7,3 +8,4 @@ def test_prompt_command():
         result = runner.invoke(cli, ['prompt', 'create a new project'], input='y\n')
         assert result.exit_code == 0
         assert "Executing prompt" in result.output
+

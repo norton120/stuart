@@ -17,10 +17,9 @@ class StuartCLI:
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
 
-    def execute_prompt(self, prompt_text: str) -> None:
-        """Execute the given prompt."""
-        logger.debug("Processing prompt...")
-        click.echo("Processing...")
+    def execute_prompt(self, prompt_text: str) -> str:
+        """Execute a prompt using promptic."""
+        logger.debug("Processing prompt with promptic...")
 
 @click.group()
 @click.pass_context
@@ -38,7 +37,8 @@ def prompt(obj: StuartCLI, prompt_text: str) -> None:
 
     if click.confirm("Do you want to proceed?", default=True):
         try:
-            obj.execute_prompt(prompt_text)
+            result = obj.execute_prompt(prompt_text)
+            click.echo(f"Result:\n{result}")
         except Exception as e:
             logger.error(f"Failed to process prompt: {e}", exc_info=True)
             click.echo(f"Error: {e}", err=True)

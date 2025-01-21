@@ -8,6 +8,7 @@ authors = ["Ethan Knox <ethan@pirate.baby>"]
 python = "~=3.13"
 sqlalchemy = "~=2.0.37"
 click = "~=8.1"
+promptic = "^4.1.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"
