@@ -3,7 +3,7 @@ import pytest
 import factory
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import Session
-from stuart.models import Project, Base
+from stuart.models import Project, File, Base
 
 class ProjectFactory(factory.Factory):
     """Factory for creating Project instances in tests."""
@@ -16,9 +16,23 @@ class ProjectFactory(factory.Factory):
     architectural_description = "Sample Architectural Description"
     current_state = "planning"
 
+class FileFactory(factory.Factory):
+    """Factory for creating File instances in tests."""
+
+    class Meta:
+        model = File
+
+    filename = factory.Sequence(lambda n: f"test/path/file_{n}.py")
+    suffix = ".py"
+    description = "A sample Python file"
+
 @pytest.fixture
 def project_factory() -> Type[ProjectFactory]:
     return ProjectFactory
+
+@pytest.fixture
+def file_factory() -> Type[FileFactory]:
+    return FileFactory
 
 @pytest.fixture
 def engine() -> Engine:

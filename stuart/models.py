@@ -42,3 +42,17 @@ class Project(Base):
     architectural_description: Mapped[Optional[str]] = mapped_column(Text,
         doc="Description of the project's architectural design and patterns")
     current_state: Mapped[Optional[str]] = mapped_column(String, doc="Any current condition of the project as it pertains to development.")
+
+class File(Base):
+    """A file in the project's codebase.
+    """
+    __tablename__ = 'file'
+
+    filename: Mapped[str] = mapped_column(String(255),
+        nullable=False, unique=True, index=True,
+        doc="Full path of the file relative to project root")
+    suffix: Mapped[str] = mapped_column(String(32),
+        nullable=False, index=True,
+        doc="File extension (e.g. '.py', '.js', '.md')")
+    description: Mapped[Optional[str]] = mapped_column(Text,
+        doc="Description of the file's purpose and contents")

@@ -15,6 +15,7 @@ When given a task:
 4. Once tests are passing, refactor to DRY out, make more legible, and better follow these guidelines.
 5. Any time you add or remove any file, make sure to update the tree.txt file.
 
+
 Refactoring
 -----------
 When refactoring code:
