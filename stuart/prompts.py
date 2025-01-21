@@ -78,12 +78,7 @@ def _upsert_function(
     )
 
     for import_ in imports:
-        file.imports.append(
-            FileImport(
-                imported=import_.imported,
-                from_path=import_.from_path,
-                alias=import_.alias
-            ))
+        file.imports.append(FileImport(**import_.model_dump()))
 
     # Update function using combination of file_id and name
     function, _ = FNode.upsert(
@@ -107,7 +102,7 @@ def _upsert_function(
 def upsert_function(
     module_path: str | Path,
     function_name: str,
-    imports: List[FileImportModel],
+    imports: List[dict],  # Changed from List[FileImportModel] to List[dict]
     description: str,
     return_type: str,
     code: str
@@ -118,7 +113,7 @@ def upsert_function(
     Args:
         module_path: Path to the module containing the function
         function_name: Name of the function to create/update
-        imports: List of imports required by the function
+        imports: List of dicts containing import information (imported, from_path, alias)
         description: Function docstring/description
         return_type: Return type annotation for the function
         code: Function implementation code
@@ -129,12 +124,14 @@ def upsert_function(
     Raises:
         ValueError: If module path or function name is invalid
     """
+    import_models = [FileImportModel(**imp) for imp in imports]
+
     with get_session() as session:
         return _upsert_function(
             session=session,
             module_path=module_path,
             function_name=function_name,
-            imports=imports,
+            imports=import_models,
             description=description,
             return_type=return_type,
             code=code
