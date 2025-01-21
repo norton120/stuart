@@ -23,6 +23,9 @@ When refactoring code:
 2. Don't catch bare exceptions - if you don't know what you are catching, let it rise.
 3. Make sure all code has appropriate logging statements.
 
+Structure
+---------
+Business logic for the internals of stuart belong in `stuart/__init__.py`.
 
 Module/File Guidelines
 ------------

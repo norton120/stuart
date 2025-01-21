@@ -7,8 +7,10 @@ stuart/
 ├── pyproject.toml
 ├── stuart/
 │   ├── models.py
+│   ├── tools.py
 │   └── cli.py
 └── tests/
     ├── conftest.py
     ├── test_cli.py
-    └── test_models.py
+    ├── test_models.py
+    └── test_tools.py
