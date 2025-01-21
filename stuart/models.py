@@ -56,3 +56,17 @@ class File(Base):
         doc="File extension (e.g. '.py', '.js', '.md')")
     description: Mapped[Optional[str]] = mapped_column(Text,
         doc="Description of the file's purpose and contents")
+
+class Typing(Base):
+    """A type definition that can be used across the project.
+    """
+    __tablename__ = 'typing'
+
+    name: Mapped[str] = mapped_column(String(100),
+        nullable=False, unique=True, index=True,
+        doc="Name of the type definition")
+    description: Mapped[Optional[str]] = mapped_column(Text,
+        doc="Description of what this type represents and how it should be used")
+    body: Mapped[str] = mapped_column(Text,
+        nullable=False,
+        doc="The actual type definition code")

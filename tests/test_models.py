@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy.exc import IntegrityError
-from stuart.models import Project, File
+from stuart.models import Project, File, Typing
 
 def test_create_project(session, project_factory):
     # Create project instance
@@ -38,6 +38,34 @@ def test_file_unique_filename(session, file_factory):
     # Try to create second file with same filename
     file2 = file_factory(filename="same/path/file.py")
     session.add(file2)
+
+    # Should raise integrity error due to unique constraint
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+def test_create_typing(session, typing_factory):
+    # Create typing instance
+    typing = typing_factory()
+
+    # Save to database
+    session.add(typing)
+    session.commit()
+
+    # Verify it was saved
+    saved_typing = session.get(typing.__class__, typing.id)
+    assert saved_typing.name == "CustomType0"
+    assert saved_typing.description == "A custom type definition"
+    assert saved_typing.body == "type CustomType = string | number;"
+
+def test_typing_unique_name(session, typing_factory):
+    # Create and save first typing
+    typing1 = typing_factory(name="DuplicateType")
+    session.add(typing1)
+    session.commit()
+
+    # Try to create second typing with same name
+    typing2 = typing_factory(name="DuplicateType")
+    session.add(typing2)
 
     # Should raise integrity error due to unique constraint
     with pytest.raises(IntegrityError):
