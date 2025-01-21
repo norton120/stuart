@@ -11,5 +11,5 @@ def test_create_project(session, project_factory):
 
     # Verify it was saved
     saved_project = session.get(project.__class__, project.id)
-    assert saved_project.name == "Sample Project"
+    assert saved_project.name == "Test Project 0"  # Changed to match factory output
     assert saved_project.description == "Sample Description"

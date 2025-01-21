@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, Text, DateTime, event
 
@@ -22,11 +22,11 @@ class Base(DeclarativeBase):
     id: Mapped[int] = mapped_column(primary_key=True,
         doc="Unique identifier for all model instances")
     created_at: Mapped[datetime] = mapped_column(DateTime,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
         doc="Timestamp when the record was created")
     updated_at: Mapped[datetime] = mapped_column(DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         doc="Timestamp when the record was last updated")
 
 class Project(Base):
