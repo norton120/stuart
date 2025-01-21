@@ -1,9 +1,12 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 from logging import getLogger
 from requests import get, HTTPError
 from pathlib import Path
-from stuart.typing import PypiPackage, FileImportModel, FunctionModel
+from stuart.typing import PypiPackage, FileImportModel, FunctionModel, ModuleModel
 from stuart.models import File, FNode, FileImport, Base, get_session
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 logger = getLogger(__name__)
 
@@ -15,6 +18,7 @@ logger = getLogger(__name__)
 - Include comprehensive but brief docstrings for every function.
 
 """
+
 
 def get_pypi_package(package_name: str) -> PypiPackage:
     """
@@ -135,4 +139,79 @@ def upsert_function(
             description=description,
             return_type=return_type,
             code=code
+        )
+
+def _upsert_module(
+    session: "Session",
+    module_path: str | Path,
+    imports: List[FileImportModel],
+    description: str | None = None,
+) -> ModuleModel:
+    """Internal implementation of upsert_module with session management."""
+    logger.info("Upserting module %s", module_path)
+
+    # Normalize path
+    module_path = Path(module_path)
+    if not str(module_path).endswith('.py'):
+        module_path = module_path.with_suffix('.py')
+
+    # Get or create file, and update its description
+    file, _ = File.upsert(
+        session,
+        name=str(module_path),
+        suffix='.py',
+        description=description or f"Module at {module_path}"
+    )
+
+    # Clear existing imports if any
+    file.imports.clear()
+
+    # Add new imports
+    for import_ in imports:
+        file.imports.append(FileImport(**import_.model_dump()))
+
+    session.commit()
+
+    # Convert SQLAlchemy FileImport objects to dicts for Pydantic
+    import_models = [
+        FileImportModel(
+            imported=imp.imported,
+            from_path=imp.from_path,
+            alias=imp.alias
+        ) for imp in file.imports
+    ]
+
+    return ModuleModel(
+        name=file.name,
+        description=file.description,
+        imports=import_models
+    )
+
+def upsert_module(
+    module_path: str | Path,
+    imports: List[dict],
+    description: str | None = None,
+) -> ModuleModel:
+    """
+    Create or update a module file with imports.
+
+    Args:
+        module_path: Path to the module file
+        imports: List of dicts containing import information (imported, from_path, alias)
+        description: Optional description of the module's purpose
+
+    Returns:
+        ModuleModel representing the created/updated module
+
+    Raises:
+        ValueError: If module path is invalid
+    """
+    import_models = [FileImportModel(**imp) for imp in imports]
+
+    with get_session() as session:
+        return _upsert_module(
+            session=session,
+            module_path=module_path,
+            imports=import_models,
+            description=description,
         )

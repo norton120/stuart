@@ -53,3 +53,9 @@ class BaseModelWithTimestamps(BaseModel):
     """Base model providing common timestamp fields."""
     created_at: datetime = Field(description="Timestamp when the record was created")
     updated_at: datetime = Field(description="Timestamp when the record was last updated")
+
+class ModuleModel(BaseModel):
+    """Module definition for file operations."""
+    name: str = Field(description="Full path of the module file")
+    description: Optional[str] = Field(None, description="Description of the module's purpose")
+    imports: List[FileImportModel] = Field(default_factory=list, description="Import statements in the module")

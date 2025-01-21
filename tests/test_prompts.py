@@ -1,7 +1,7 @@
 import pytest
 from requests.exceptions import HTTPError
 from vcr import VCR
-from stuart.prompts import get_pypi_package, upsert_function
+from stuart.prompts import get_pypi_package, upsert_function, upsert_module
 from stuart.typing import PypiPackage, FileImportModel
 
 vcr = VCR(
@@ -102,3 +102,51 @@ def test_upsert_function_normalize_path():
     )
 
     assert result.name == "example"
+
+def test_upsert_module_create():
+    """Test creating a new module."""
+    imports = [
+        {"imported": "typing", "from_path": None},
+        {"imported": "List", "from_path": "typing"}
+    ]
+
+    result = upsert_module(
+        "src/utils/types.py",
+        imports,
+        "Common type definitions"
+    )
+
+    assert result.name.endswith("src/utils/types.py")
+    assert result.description == "Common type definitions"
+    assert len(result.imports) == 2
+
+def test_upsert_module_update():
+    """Test updating an existing module's imports."""
+    # Create initial module
+    initial = upsert_module(
+        "src/utils/types.py",
+        [{"imported": "typing", "from_path": None}],
+        "Type definitions"
+    )
+
+    # Update imports
+    updated = upsert_module(
+        "src/utils/types.py",
+        [{"imported": "List", "from_path": "typing"}],
+        "Updated type definitions"
+    )
+
+    assert updated.name == initial.name
+    assert updated.description == "Updated type definitions"
+    assert len(updated.imports) == 1
+    assert updated.imports[0].imported == "List"
+
+def test_upsert_module_normalize_path():
+    """Test path normalization when creating module."""
+    result = upsert_module(
+        "src/utils/types",  # No .py extension
+        [],
+        "Empty module"
+    )
+
+    assert result.name.endswith(".py")
