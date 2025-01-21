@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import Optional
 import logging
 from datetime import datetime, UTC
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Text, DateTime, event
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import String, Text, DateTime, event, ForeignKey
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,8 @@ class File(Base):
         doc="File extension (e.g. '.py', '.js', '.md')")
     description: Mapped[Optional[str]] = mapped_column(Text,
         doc="Description of the file's purpose and contents")
+    functions: Mapped[list["FNode"]] = relationship("FNode", back_populates="file",
+        cascade="all, delete-orphan")
 
 class Typing(Base):
     """A type definition that can be used across the project.
@@ -82,3 +84,23 @@ class CNode(Base):
     value: Mapped[str] = mapped_column(Text,
         nullable=False,
         doc="Value for this constant")
+
+class FNode(Base):
+    """Function defined within a module.
+    """
+    __tablename__ = 'f_node'
+
+    file_id: Mapped[int] = mapped_column(ForeignKey("file.id"),
+        nullable=False, index=True,
+        doc="Reference to the file containing this function")
+    name: Mapped[str] = mapped_column(String(255),
+        nullable=False,
+        doc="Name of the function")
+    description: Mapped[Optional[str]] = mapped_column(Text,
+        doc="Description of what the function does")
+    body: Mapped[str] = mapped_column(Text,
+        nullable=False,
+        doc="The actual function implementation code")
+
+    # Relationship to parent file
+    file: Mapped["File"] = relationship("File", back_populates="functions")

@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy.exc import IntegrityError
-from stuart.models import Project, File, Typing, CNode
+from stuart.models import Project, File, Typing, CNode, FNode
 
 def test_create_project(session, project_factory):
     # Create project instance
@@ -97,3 +97,37 @@ def test_cnode_unique_name(session, cnode_factory):
     # Should raise integrity error due to unique constraint
     with pytest.raises(IntegrityError):
         session.commit()
+
+def test_create_fnode(session, file_factory, fnode_factory):
+    # Create file first
+    file = file_factory(filename="test/path/specific_file.py")
+
+    # Create fnode instance with specific file
+    fnode = fnode_factory(file=file)
+
+    # Save to database
+    session.add(file)
+    session.add(fnode)
+    session.commit()
+
+    # Verify it was saved
+    saved_fnode = session.get(fnode.__class__, fnode.id)
+    assert saved_fnode.name == "function_0"
+    assert saved_fnode.description == "A sample function"
+    assert saved_fnode.body == "def sample_function():\n    return True"
+    assert saved_fnode.file.filename == "test/path/specific_file.py"
+
+def test_file_functions_relationship(session, file_factory, fnode_factory):
+    # Create file with two functions
+    file = file_factory()
+    fnode1 = fnode_factory(file=file, name="func1")
+    fnode2 = fnode_factory(file=file, name="func2")
+
+    session.add(file)
+    session.add_all([fnode1, fnode2])
+    session.commit()
+
+    # Verify relationship
+    saved_file = session.get(File, file.id)
+    assert len(saved_file.functions) == 2
+    assert {f.name for f in saved_file.functions} == {"func1", "func2"}
