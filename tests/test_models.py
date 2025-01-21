@@ -116,6 +116,7 @@ def test_create_fnode(session, file_factory, fnode_factory):
     assert saved_fnode.description == "A sample function"
     assert saved_fnode.body == "def sample_function():\n    return True"
     assert saved_fnode.file.filename == "test/path/specific_file.py"
+    assert saved_fnode.return_type == "bool"  # Verify return type
 
 def test_file_functions_relationship(session, file_factory, fnode_factory):
     # Create file with two functions

@@ -55,6 +55,7 @@ class FNodeFactory(factory.Factory):
     name = factory.Sequence(lambda n: f"function_{n}")
     description = "A sample function"
     body = "def sample_function():\n    return True"
+    return_type = "bool"
 
 @pytest.fixture
 def project_factory() -> Type[ProjectFactory]:

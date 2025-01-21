@@ -101,6 +101,9 @@ class FNode(Base):
     body: Mapped[str] = mapped_column(Text,
         nullable=False,
         doc="The actual function implementation code")
+    return_type: Mapped[str] = mapped_column(String(100),
+        nullable=False,
+        doc="The return type of the function")
 
     # Relationship to parent file
     file: Mapped["File"] = relationship("File", back_populates="functions")
