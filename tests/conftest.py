@@ -3,7 +3,7 @@ import pytest
 import factory
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import Session
-from stuart.models import Project, File, Typing, CNode, FNode, Base
+from stuart.models import Project, File, Typing, CNode, FNode, FileImport, Base
 import vcr
 
 # Remove vcr configuration since we're handling it in test_prompts.py
@@ -60,6 +60,17 @@ class FNodeFactory(factory.Factory):
     body = "def sample_function():\n    return True"
     return_type = "bool"
 
+class FileImportFactory(factory.Factory):
+    """Factory for creating FileImport instances in tests."""
+
+    class Meta:
+        model = FileImport
+
+    file = factory.SubFactory(FileFactory)
+    import_path = "os.path"
+    from_path = "os"
+    alias = None
+
 @pytest.fixture
 def project_factory() -> Type[ProjectFactory]:
     return ProjectFactory
@@ -79,6 +90,10 @@ def cnode_factory() -> Type[CNodeFactory]:
 @pytest.fixture
 def fnode_factory() -> Type[FNodeFactory]:
     return FNodeFactory
+
+@pytest.fixture
+def file_import_factory() -> Type[FileImportFactory]:
+    return FileImportFactory
 
 @pytest.fixture
 def engine() -> Engine:

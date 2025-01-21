@@ -3,7 +3,7 @@ from typing import Optional
 import logging
 from datetime import datetime, UTC
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import String, Text, DateTime, event, ForeignKey
+from sqlalchemy import String, Text, DateTime, event, ForeignKey, Column, Integer
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,7 @@ class File(Base):
         doc="Description of the file's purpose and contents")
     functions: Mapped[list["FNode"]] = relationship("FNode", back_populates="file",
         cascade="all, delete-orphan")
+    imports: Mapped[list["FileImport"]] = relationship("FileImport", back_populates="file", cascade="all, delete-orphan")
 
 class Typing(Base):
     """A type definition that can be used across the project.
@@ -107,3 +108,24 @@ class FNode(Base):
 
     # Relationship to parent file
     file: Mapped["File"] = relationship("File", back_populates="functions")
+
+class FileImport(Base):
+    """Model representing import statements in a file."""
+    __tablename__ = "file_imports"
+
+    id = Column(Integer, primary_key=True)
+    file_id = Column(Integer, ForeignKey("file.id"), nullable=False)
+    import_path = Column(String, nullable=False)
+    from_path = Column(String, nullable=True)
+    alias = Column(String, nullable=True)
+
+    file = relationship("File", back_populates="imports")
+
+    def __repr__(self) -> str:
+        if self.from_path:
+            if self.alias:
+                return f"from {self.from_path} import {self.import_path} as {self.alias}"
+            return f"from {self.from_path} import {self.import_path}"
+        if self.alias:
+            return f"import {self.import_path} as {self.alias}"
+        return f"import {self.import_path}"
