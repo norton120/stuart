@@ -67,7 +67,7 @@ class FileImportFactory(factory.Factory):
         model = FileImport
 
     file = factory.SubFactory(FileFactory)
-    import_path = "os.path"
+    imported = "os.path"
     from_path = "os"
     alias = None
 

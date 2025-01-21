@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import Optional
 import logging
+from pathlib import Path
 from datetime import datetime, UTC
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
 from sqlalchemy import String, Text, DateTime, event, ForeignKey, Column, Integer
 
 logger = logging.getLogger(__name__)
@@ -115,17 +116,72 @@ class FileImport(Base):
 
     id = Column(Integer, primary_key=True)
     file_id = Column(Integer, ForeignKey("file.id"), nullable=False)
-    import_path = Column(String, nullable=False)
+    imported = Column(String, nullable=False)
     from_path = Column(String, nullable=True)
     alias = Column(String, nullable=True)
 
     file = relationship("File", back_populates="imports")
 
     def __repr__(self) -> str:
+        statement = f"import {self.imported}"
         if self.from_path:
-            if self.alias:
-                return f"from {self.from_path} import {self.import_path} as {self.alias}"
-            return f"from {self.from_path} import {self.import_path}"
+            statement = f"from {self.from_path} {statement}"
         if self.alias:
-            return f"import {self.import_path} as {self.alias}"
-        return f"import {self.import_path}"
+            statement += f" as {self.alias}"
+        return statement
+
+def render_package(session: Session, root_path: str | Path) -> None:
+    """
+    Render a Python package from the models in the database.
+
+    Args:
+        session: SQLAlchemy session containing the models
+        root_path: Path to the project root directory
+    """
+    root = Path(root_path).resolve()
+    logger.info("Rendering Python package at %s", root)
+    root.mkdir(parents=True, exist_ok=True)
+
+    # Render typings file
+    typings = session.query(Typing).all()
+    if typings:
+        logger.info("Rendering %d type definitions", len(typings))
+        typings_file = root / "typings.py"
+        typings_file.write_text(
+            "\"\"\"Type definitions for the project.\"\"\"\n\n" +
+            "".join(
+                f"# {typing.description}\n{typing.body}\n\n"
+                for typing in typings
+            )
+        )
+
+    # Render constants file
+    constants = session.query(CNode).all()
+    if constants:
+        logger.info("Rendering %d constants", len(constants))
+        constants_file = root / "constants.py"
+        constants_file.write_text(
+            "\"\"\"Project constants.\"\"\"\n\n" +
+            "".join(f"{const.name.upper()} = {const.value}\n" for const in constants)
+        )
+
+    # Render individual files with their functions
+    for file in session.query(File).all():
+        logger.info("Rendering file %s", file.filename)
+        file_path = root / file.filename
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        content = [
+            *[f"{imp}\n" for imp in file.imports],
+            "\n" if file.imports else "",
+            f"\"\"\"{file.description}\"\"\"\n\n" if file.description else "",
+            *[
+                f"{f'\"\"\"{func.description}\"\"\"\n' if func.description else ''}"
+                f"{func.body}\n\n"
+                for func in file.functions
+            ]
+        ]
+
+        file_path.write_text("".join(content))
+
+    logger.info("Package rendering complete")
