@@ -241,3 +241,43 @@ def test_render_package_nested_directories(session, file_factory):
         render_package(session, tmp_dir)
         root = Path(tmp_dir)
         assert (root / "deep" / "nested" / "path" / "module.py").is_file()
+
+def test_project_tree(session, project_factory, file_factory, fnode_factory):
+    """Test project tree generation"""
+    project = project_factory(name="myproject")
+    session.add(project)
+
+    # Create sample file structure
+    files = [
+        file_factory(filename="src/main.py"),
+        file_factory(filename="src/utils/helpers.py"),
+        file_factory(filename="tests/test_main.py")
+    ]
+    session.add_all(files)
+
+    # Add functions to files
+    functions = [
+        fnode_factory(file=files[0], name="main"),
+        fnode_factory(file=files[1], name="helper_one"),
+        fnode_factory(file=files[1], name="helper_two"),
+        fnode_factory(file=files[2], name="test_main_function")
+    ]
+    session.add_all(functions)
+    session.commit()
+
+    tree = project.tree(session)
+
+    # Verify tree structure
+    expected = """myproject/
+├── src/
+│   ├── main.py
+│   │   └── main()
+│   └── utils/
+│       └── helpers.py
+│           ├── helper_one()
+│           └── helper_two()
+└── tests/
+    └── test_main.py
+        └── test_main_function()"""
+
+    assert tree.strip() == expected.strip()

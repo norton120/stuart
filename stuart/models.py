@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime, UTC
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
 from sqlalchemy import String, Text, DateTime, event, ForeignKey, Column, Integer
+from treelib import Tree
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,46 @@ class Project(Base):
     architectural_description: Mapped[Optional[str]] = mapped_column(Text,
         doc="Description of the project's architectural design and patterns")
     current_state: Mapped[Optional[str]] = mapped_column(String, doc="Any current condition of the project as it pertains to development.")
+
+    def tree(self, session: Session) -> str:
+        """
+        Generate a tree-style representation of the project structure.
+        """
+        logger.info("Generating tree for project %s", self.name)
+        tree = Tree()
+        tree.create_node(f"{self.name}/", "root")
+
+        # Get all files and sort by path
+        files = session.query(File).order_by(File.filename).all()
+
+        # Track processed paths to handle directories
+        processed = {"root"}
+
+        for file in files:
+            parts = Path(file.filename).parts
+            current = "root"
+
+            # Add directory nodes
+            for part in parts[:-1]:
+                parent = current
+                current = f"{current}/{part}"
+                if current not in processed:
+                    tree.create_node(f"{part}/", current, parent=parent)
+                    processed.add(current)
+
+            # Add file node
+            file_id = f"{current}/{parts[-1]}"
+            tree.create_node(parts[-1], file_id, parent=current)
+
+            # Add function nodes
+            for func in file.functions:
+                tree.create_node(
+                    f"{func.name}()",
+                    f"{file_id}/{func.name}",
+                    parent=file_id
+                )
+
+        return tree.show(stdout=False)
 
 class File(Base):
     """A file in the project's codebase.
