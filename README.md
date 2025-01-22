@@ -1,5 +1,5 @@
 # Stuart
-_a GDD experiment_
+_a [GDD](https://pirate.baby/posts/generative_driven_design/) experiment_
 
 
 >[!WARNING]
