@@ -3,6 +3,8 @@ _a GDD experiment_
 
 ![Stuart from MadTV](https://media0.giphy.com/media/czZlH3xg1Ul2w/giphy.gif?cid=6c09b952811227g3c0p6f02kcndisopi0z8019a9a9kab7h6&ep=v1_gifs_search&rid=giphy.gif&ct=g)
 
+>[!WARNING]
+> This code doesn't do much of anything yet. The meat, at the moment, is in discussion of the concept as stated here.👇
 
 ## The Problem
 When generating code with an LLM, size matters. Consider the most impressive examples of genAI coding: simple greenfield scripts and tiny, atomic application changes (like updating a button or fixing a bug) that require an inerently limited context. That is why they work so well. But once the reference code grows in size and spreads across multiple modules, generations quickly degrade; context volume waters down what should ideally be precision completions, and you get compounding halucinations, loopy, rambling code, and eventual breakdown. These generations also add cruft that would make sense in the context of a stand-alone script, but clog the codebase of full-blown application - in turn making subsequent generations worse and compounding the issue.
@@ -53,7 +55,7 @@ Processes will follow a pipeline that has a rough pattern of:
 3. refactoring is top-down and minimal, because things like formatting and linting aren't appropriate. Linting and formatting are human helpers.
 3. the db state is committed with details, and the rendered codebase is committed as a _read only artifact_ purely for human review.
 
-> [INFO]
+> [!INFO]
 > Code is rendered in the repo as an artifact only for the benefit of the humans. Similar to compiled JS or the rendered HTML in an SPA, this is read-only and you need to modify the source (in this case the db binary) to modify the code.
 
 We'll need some way to make human mods to code easy - maybe a `editable <function_name>` cli command that renders the code in a .py file, then parses it back into the db on save? Ideally this shouldn't be the norm; once we start rendering the whole codebase humans will want to apply things that make life easier for us (and subsequently harder for the LLM), and we slide backwards.
