@@ -8,7 +8,7 @@ _a GDD experiment_
 ## The Problem
 When generating code with an LLM, size matters. Consider the most impressive examples of genAI coding: simple greenfield scripts and tiny, atomic application changes (like updating a button or fixing a bug) that require an inerently limited context. That is why they work so well. But once the reference code grows in size and spreads across multiple modules, generations quickly degrade; context volume waters down what should ideally be precision completions, and you get compounding halucinations, loopy, rambling code, and eventual breakdown. These generations also add cruft that would make sense in the context of a stand-alone script, but clog the codebase of full-blown application - in turn making subsequent generations worse and compounding the issue.
 
-Unlike chatbot `RAG`, the effectiveness of codebase `RAG` is limited - semantic similarity does much more for natural lanaguage than for code prediction. Novel `RAG` techniques involving AST parsing have made things a little better, but there's a notable cliff in the size of the application this works for.
+Unlike chatbot RAG, the effectiveness of codebase RAG is limited - semantic similarity does much more for natural lanaguage than for code prediction. Novel RAG techniques involving AST parsing have made things a little better, but there's a notable cliff in the size of the application this works for.
 
 ## The Theory
 
