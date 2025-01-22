@@ -54,13 +54,14 @@ Processes will follow a pipeline that has a rough pattern of:
 3. refactoring is top-down and minimal, because things like formatting and linting aren't appropriate. Linting and formatting are human helpers.
 3. the db state is committed with details, and the rendered codebase is committed as a _read only artifact_ purely for human review.
 
-> [!INFO]
+> [!TIP]
 > Code is rendered in the repo as an artifact only for the benefit of the humans. Similar to compiled JS or the rendered HTML in an SPA, this is read-only and you need to modify the source (in this case the db binary) to modify the code.
 
 We'll need some way to make human mods to code - maybe a `editable <function_name>` cli command that renders the code in a .py file, then parses it back into the db on save? Ideally this shouldn't be the norm; once we start rendering the whole codebase all the time, humans will want to apply those constructs to make life easier for humans (and subsequently harder for the LLM), and we will slide backwards.
 
 ### What next?
-Completing the elements described above so they actually do what is described, and developing the first GDD codebases for simple apps to prove viability of the approach. Then seeing if there is evidence that it can work. Especially:
+**The code in this repo does almost nothing at the moment. So, there's that.**
+First up is completing the elements described above so they actually do what is described, and developing the a first GDD codebase for a simple app to prove viability of the approach. Then seeing if there is evidence that it can work. Especially:
 - does it work over many iterations? Do we avoid "bot rot" or is that still an eventuality of LLM code?
 - how does growing codebase complexity impact effectiveness?
 - what do humans need to "step in" for? can we capture and codify these processes too?
