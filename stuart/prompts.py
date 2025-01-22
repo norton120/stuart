@@ -5,6 +5,8 @@ from pathlib import Path
 from stuart.typing import PypiPackage, FileImportModel, FunctionModel, ModuleModel
 from stuart.models import File, FNode, FileImport, Base, get_session
 
+from promptic import llm
+
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
@@ -19,6 +21,11 @@ logger = getLogger(__name__)
 
 """
 
+@llm(
+        model="mistralai/Mistral-7B-Instruct-v0.2",
+)
+def edit_code(ask: str):
+    """Use the provided editor fuctions to complete this ask: {ask}"""
 
 def get_pypi_package(package_name: str) -> PypiPackage:
     """
@@ -103,6 +110,7 @@ def _upsert_function(
         return_type=function.return_type
     )
 
+@edit_code.tool
 def upsert_function(
     module_path: str | Path,
     function_name: str,
@@ -187,6 +195,7 @@ def _upsert_module(
         imports=import_models
     )
 
+@edit_code.tool
 def upsert_module(
     module_path: str | Path,
     imports: List[dict],

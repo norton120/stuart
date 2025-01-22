@@ -4,14 +4,22 @@ stuart/
 ├── Dockerfile
 ├── LICENSE
 ├── README.md
+├── docker-compose.yml
 ├── pyproject.toml
+├── poetry.lock
 ├── stuart/
 │   ├── __init__.py
+│   ├── cli.py
 │   ├── models.py
 │   ├── prompts.py
-│   ├── typing.py
-│   └── cli.py
+│   └── typing.py
 └── tests/
     ├── conftest.py
+    ├── fixtures/
+    │   └── vcr_cassettes/
+    │       ├── pypi_nonexistent_package.yaml
+    │       ├── pypi_requests_success.yaml
+    │       └── pypi_server_error.yaml
     ├── test_cli.py
-    └── test_models.py
+    ├── test_models.py
+    └── test_prompts.py

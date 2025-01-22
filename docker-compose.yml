@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    command: poetry run stuart
+
+  test:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - PYTEST_ADDOPTS="--cov=stuart --cov-report=term-missing"
+    command: poetry run pytest
+
+  lint:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+    command: >
+      sh -c "poetry run ruff check . &&
+             poetry run black . --check &&
+             poetry run mypy ."
