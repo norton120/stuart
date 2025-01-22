@@ -1,7 +1,6 @@
 # Stuart
 _a GDD experiment_
 
-![Stuart from MadTV](https://media0.giphy.com/media/czZlH3xg1Ul2w/giphy.gif?cid=6c09b952811227g3c0p6f02kcndisopi0z8019a9a9kab7h6&ep=v1_gifs_search&rid=giphy.gif&ct=g)
 
 >[!WARNING]
 > This code doesn't do much of anything yet. The meat, at the moment, is in discussion of the concept as stated here.👇
@@ -62,3 +61,11 @@ We'll need some way to make human mods to code easy - maybe a `editable <functio
 
 ### What next?
 Completing the elements described above, and developing the first GDD codebases for simple apps to prove viability of the approach.
+
+
+<details>
+<summary>Why Stuart?</summary>
+<img alt="Stuart from MadTV" src="https://media0.giphy.com/media/czZlH3xg1Ul2w/giphy.gif?cid=6c09b952811227g3c0p6f02kcndisopi0z8019a9a9kab7h6&ep=v1_gifs_search&rid=giphy.gif&ct=g"/>
+
+This is what every AI coding agent feels like at some level.
+</details>
