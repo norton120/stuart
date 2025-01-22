@@ -22,10 +22,11 @@ logger = getLogger(__name__)
 """
 
 @llm(
-        model="mistralai/Mistral-7B-Instruct-v0.2",
+        model="gpt-4o",
+        system="Use the provided code editor functions to complete this ask. Call as many functions as needed.",
 )
 def edit_code(ask: str):
-    """Use the provided editor fuctions to complete this ask: {ask}"""
+    """{ask}"""
 
 def get_pypi_package(package_name: str) -> PypiPackage:
     """
@@ -71,7 +72,7 @@ def _upsert_function(
     description: str,
     return_type: str,
     code: str
-) -> FunctionModel:
+) -> None:
     """Internal implementation of upsert_function with session management."""
     logger.info("Upserting function %s in module %s", function_name, module_path)
 
@@ -103,13 +104,6 @@ def _upsert_function(
 
     session.commit()
 
-    return FunctionModel(
-        name=function.name,
-        description=function.description,
-        body=function.body,
-        return_type=function.return_type
-    )
-
 @edit_code.tool
 def upsert_function(
     module_path: str | Path,
@@ -118,20 +112,17 @@ def upsert_function(
     description: str,
     return_type: str,
     code: str
-) -> FunctionModel:
+) -> None:
     """
     Create or update a function definition in the specified module.
 
     Args:
         module_path: Path to the module containing the function
         function_name: Name of the function to create/update
-        imports: List of dicts containing import information (imported, from_path, alias)
+        imports: List of objects containing import information (imported, from_path, alias)
         description: Function docstring/description
         return_type: Return type annotation for the function
         code: Function implementation code
-
-    Returns:
-        FunctionModel representing the created/updated function
 
     Raises:
         ValueError: If module path or function name is invalid
@@ -154,7 +145,7 @@ def _upsert_module(
     module_path: str | Path,
     imports: List[FileImportModel],
     description: str | None = None,
-) -> ModuleModel:
+) -> None:
     """Internal implementation of upsert_module with session management."""
     logger.info("Upserting module %s", module_path)
 
@@ -180,37 +171,20 @@ def _upsert_module(
 
     session.commit()
 
-    # Convert SQLAlchemy FileImport objects to dicts for Pydantic
-    import_models = [
-        FileImportModel(
-            imported=imp.imported,
-            from_path=imp.from_path,
-            alias=imp.alias
-        ) for imp in file.imports
-    ]
-
-    return ModuleModel(
-        name=file.name,
-        description=file.description,
-        imports=import_models
-    )
 
 @edit_code.tool
 def upsert_module(
     module_path: str | Path,
-    imports: List[dict],
+    imports: List[tuple[str, str | None, str | None]],
     description: str | None = None,
-) -> ModuleModel:
+) -> None:
     """
     Create or update a module file with imports.
 
     Args:
         module_path: Path to the module file
-        imports: List of dicts containing import information (imported, from_path, alias)
+        imports: List of tuples containing imports (name_of_import, import_from, alias,)
         description: Optional description of the module's purpose
-
-    Returns:
-        ModuleModel representing the created/updated module
 
     Raises:
         ValueError: If module path is invalid

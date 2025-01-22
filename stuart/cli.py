@@ -1,6 +1,7 @@
 from typing import Optional
 import click
 import logging
+from .prompts import edit_code
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class StuartCLI:
     def execute_prompt(self, prompt_text: str) -> None:
         """Execute the given prompt."""
         logger.debug("Processing prompt...")
+        edit_code(prompt_text)
         click.echo("Processing...")
 
 @click.group()
