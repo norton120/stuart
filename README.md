@@ -13,12 +13,12 @@ Unlike chatbot RAG, the effectiveness of codebase RAG is limited - semantic simi
 ## The Theory
 
 ### Why code looks the way it does
-At the lowest level, binary programming is a series of switch states (on and off). Early computer users needed a repeatable way to author and execute those states, so we punched holes in paper cards to represent these instructions or "programs". Subsequent layers of abstraction represented these instructions in human written languages, but that didn't _have_ to be the case - we could have programmed in something that resembled sheet music or cartography, however we chose our human written languages. We added design paradigms to these langauages, like Object Oriented Programming, to gave our code increasingly familiar real-world analogs - "`Dog` inherits from `Animal`, `Beagle` inherits from `Dog`" and "this file belongs in this folder under this subfolder." These constructs are useful to **humans** because we can easily pattern match with those real-world analogs, and they match how we think. This system of cues and analogs is actually very complex, and it is only because it closely mirrors human thinking and memory that it is preferable to a very different code structure.
+At the lowest level, binary programming is a series of switch states (on and off). Early computer users needed a repeatable way to author and execute those states, so we punched holes in paper cards to represent these instructions or "programs". Subsequent layers of abstraction represented these instructions in human written languages, but that didn't _have_ to be the case - we could have programmed in something that resembled sheet music or cartography, however we chose our human written languages. We added design paradigms to these langauages, like Object Oriented Programming, to give our code increasingly familiar real-world analogs - "`Dog` inherits from `Animal`, `Beagle` inherits from `Dog`" and "this file belongs in this folder under this subfolder." These constructs are useful to **humans** because we can easily pattern match with those real-world analogs, and they match how we think. This system of cues and analogs is actually very complex, and it is only because it closely mirrors human thinking and memory that it is preferable to a very different code structure.
 
 ### LLM coding size and context
-What do we know about LLM code completions (most specifically in regard to instruct models)? We know that training pairs trend towards highly focused code "snippets." Consider the format in Stack Overflow, GitHub issues, and similar sources of code training: a user posts redacted bits of code that are deemed relevant, then asks a question, and responses are similarly formatted. It is no surprise that code snippets are where these models excel; "write some Python to get the current weather for next week" and "write an image carousel in JavaScript" are isolated, atomic and targeted code blurbs that require minimal context traversal, and we know these tend to do exceptionally well.
+What do we know about LLM code completions (most specifically in regard to instruct models)? We know that training pairs trend towards highly focused code "snippets." Consider the format in Stack Overflow, GitHub issues, and similar sources of code training: a user posts redacted bits of code that are deemed relevant, then asks a question, and responses are similarly formatted. It is no surprise that code snippets are where these models excel; "write some Python to get the current weather for next week" and "write an image carousel in JavaScript" are isolated, atomic and targeted code blurbs that require minimal context traversal.
 
-We also know that poor context stuffing severely impairs generation quality. Dump the whole of a tiny application into the system prompt as context, and even simple requests turn to slush. RAG can help mitigate this degradation effect at a toy scale, but even very small projects lose fidelity to the point of failure very quickly. Case in point: When the `CONTRIBUTING.md` file in this repository was added to the Copilot working set, proceeding completions followed the instructions to check for non-code solutions and always start with tests. As the working set grew, completions began ignoring those instructions even when directly prompted - the noise from oversaturated RAG washed out the prompts.
+We also know that poor context stuffing severely impairs generation quality. Dump the whole of a tiny application into the system prompt as context, and even simple requests turn to slush. RAG can help mitigate this degradation effect at a toy scale, but even very small projects lose fidelity to the point of failure very quickly. Case in point: When the `CONTRIBUTING.md` file in this repository was added to the Copilot working set, proceeding completions followed the instructions to check for non-code solutions and always start with tests. As the working set grew by just a few files, completions began ignoring those instructions even when directly prompted - the noise from oversaturated RAG washed out the prompts.
 
 ### The rub
 Herein lies the problem: humans rely heavily on context constructs - our cues and analogs - to code efficiently. LLMs struggle with context constructs, but excel when working on isolated snippets. So this means that the software we write today using human "best practices" is woefully unsuited for the strengths of generative AI coding.
@@ -34,7 +34,7 @@ Instead of storing code in document-like corpuses and searching them like prose,
 To an LLM, Python is an extremely efficient store of information - "open the file 'file.txt' as bytes" takes fewer tokens in Python than in English or in C. It makes sense to build these snippets in a languages that are efficient and have massive volumes of training data readily available. But it is important to distinguish that additional constraints on the language must be in place to make sure snippet code is optimized for LLM completions. For example, `pytest` heavily leverages global `fixtures` defined in `conftest.py`, creating "magic" dependency injections in test modules that require contextual understanding of the project; this may be a Python best practice, but it is detrimental to our needs in _GDD_. It may actually be best for agent processes to build test functions without the `pytest` framework, instead creating atomic snippets to check functionality. Point being that the stored programming language - ideally Python or JavaScript based on the coding models available today - is a vessel for this generative-first development paradigm, not a superset of the process.
 
 ### Implementation
-In this repo I'm attempting to proof the idea of a "snippet assembly" codebase. Code elements are stored in sqlite with varying granularity:
+In this repo I'm attempting a proof of a "snippet assembly" codebase. Code elements are stored in sqlite with varying granularity:
   - highest level topography tree: modules, submodules and methods (names only)
   - module details: names, descriptions, imports
   - typing details: names, uses
@@ -42,7 +42,7 @@ In this repo I'm attempting to proof the idea of a "snippet assembly" codebase. 
   - function bodies: the code of the function
   - schema bodies: the code of the schema
 
-Work is (at least initially) assigned by a cli `ask` command. This could eventually be triggered by GitHub issues or a Slackbot etc etc.
+Work is (at least initially) assigned by a cli `ask` command. (Yes, this could eventually be triggered by GitHub issues or a Slackbot etc etc).
 
 The agent process modifies the codebase through function calling, adding/updating/removing functions, modules, types, and constants through calls.
 Processes will follow a pipeline that has a rough pattern of:
@@ -57,10 +57,13 @@ Processes will follow a pipeline that has a rough pattern of:
 > [!INFO]
 > Code is rendered in the repo as an artifact only for the benefit of the humans. Similar to compiled JS or the rendered HTML in an SPA, this is read-only and you need to modify the source (in this case the db binary) to modify the code.
 
-We'll need some way to make human mods to code easy - maybe a `editable <function_name>` cli command that renders the code in a .py file, then parses it back into the db on save? Ideally this shouldn't be the norm; once we start rendering the whole codebase humans will want to apply things that make life easier for us (and subsequently harder for the LLM), and we slide backwards.
+We'll need some way to make human mods to code - maybe a `editable <function_name>` cli command that renders the code in a .py file, then parses it back into the db on save? Ideally this shouldn't be the norm; once we start rendering the whole codebase all the time, humans will want to apply those constructs to make life easier for humans (and subsequently harder for the LLM), and we will slide backwards.
 
 ### What next?
-Completing the elements described above, and developing the first GDD codebases for simple apps to prove viability of the approach.
+Completing the elements described above so they actually do what is described, and developing the first GDD codebases for simple apps to prove viability of the approach. Then seeing if there is evidence that it can work. Especially:
+- does it work over many iterations? Do we avoid "bot rot" or is that still an eventuality of LLM code?
+- how does growing codebase complexity impact effectiveness?
+- what do humans need to "step in" for? can we capture and codify these processes too?
 
 
 <details>
