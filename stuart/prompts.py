@@ -194,7 +194,7 @@ def upsert_module(
     Raises:
         ValueError: If module path is invalid
     """
-    import_models = [FileImportModel(imp) for imp in imports]
+    import_models = [i for imp in imports for i in FileImportModel.from_string(imp)]
 
     with get_session() as session:
         return _upsert_module(

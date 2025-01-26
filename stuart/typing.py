@@ -23,7 +23,7 @@ class FileImportModel(BaseModel):
         """takes any valid import statement and returns a list of FileImportModel instances"""
         if "import" not in import_string:
             logger.warning("Invalid import statement: %s", import_string)
-            return []
+            raise ValueError("Invalid import statement")
 
         parts = import_string.split("import")
         from_path = None

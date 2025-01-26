@@ -40,8 +40,8 @@ def test_get_pypi_package_server_error():
 def test_upsert_function_create():
     """Test creating a new function in a new file."""
     imports = [
-        FileImportModel(imported="List", from_path="typing"),
-        FileImportModel(imported="Optional", from_path="typing")
+        "from typing import List",
+        "from typing import Optional"
     ]
 
     result = upsert_function(
@@ -64,7 +64,7 @@ def test_upsert_function_create():
 def test_upsert_function_update():
     """Test updating an existing function."""
     # First create the function
-    imports = [FileImportModel(imported="List", from_path="typing")]
+    imports = ["from typing import List"]
     initial = upsert_function(
         "src/utils/helpers.py",
         "process_items",
@@ -78,7 +78,7 @@ def test_upsert_function_update():
     updated = upsert_function(
         "src/utils/helpers.py",
         "process_items",
-        imports + [{"imported": "Dict", "from_path": "typing"}],
+        imports + ["from typing import Dict"],
         "Updated description",
         "List[Dict[str, str]]",
         """def process_items() -> List[Dict[str, str]]:
@@ -106,8 +106,8 @@ def test_upsert_function_normalize_path():
 def test_upsert_module_create(session):
     """Test creating a new module."""
     imports = [
-        FileImportModel(imported="typing", from_path=None),
-        FileImportModel(imported="List", from_path="typing")
+        "import typing",
+        "from typing import List"
     ]
 
     result = upsert_module(
