@@ -5,6 +5,7 @@ from pathlib import Path
 from stuart.typing import PypiPackage, FileImportModel, FunctionModel, ModuleModel
 from stuart.models import File, FNode, FileImport, Base, get_session
 
+from litellm import rerank
 from promptic import llm
 
 if TYPE_CHECKING:
@@ -93,7 +94,7 @@ def _upsert_function(
         file.imports.append(FileImport(**import_.model_dump()))
 
     # Update function using combination of file_id and name
-    function, _ = FNode.upsert(
+    function_, _ = FNode.upsert(
         session,
         name=function_name,
         file_id=file.id,
@@ -103,6 +104,9 @@ def _upsert_function(
     )
 
     session.commit()
+    session.refresh(function_)
+    return function_
+
 
 @edit_code.tool
 def upsert_function(
@@ -112,14 +116,14 @@ def upsert_function(
     description: str,
     return_type: str,
     code: str
-) -> None:
+) -> FNode:
     """
     Create or update a function definition in the specified module.
 
     Args:
         module_path: Path to the module containing the function
         function_name: Name of the function to create/update
-        imports: List of objects containing import information (imported, from_path, alias)
+        imports: List of strings containing import statements
         description: Function docstring/description
         return_type: Return type annotation for the function
         code: Function implementation code
@@ -127,7 +131,7 @@ def upsert_function(
     Raises:
         ValueError: If module path or function name is invalid
     """
-    import_models = [FileImportModel(**imp) for imp in imports]
+    import_models = [i for imp in imports for i in FileImportModel.from_string(imp)]
 
     with get_session() as session:
         return _upsert_function(
@@ -145,7 +149,7 @@ def _upsert_module(
     module_path: str | Path,
     imports: List[FileImportModel],
     description: str | None = None,
-) -> None:
+) -> File:
     """Internal implementation of upsert_module with session management."""
     logger.info("Upserting module %s", module_path)
 
@@ -170,14 +174,15 @@ def _upsert_module(
         file.imports.append(FileImport(**import_.model_dump()))
 
     session.commit()
-
+    session.refresh(file)
+    return file
 
 @edit_code.tool
 def upsert_module(
     module_path: str | Path,
     imports: List[tuple[str, str | None, str | None]],
     description: str | None = None,
-) -> None:
+) -> File:
     """
     Create or update a module file with imports.
 
@@ -198,3 +203,4 @@ def upsert_module(
             imports=import_models,
             description=description,
         )
+

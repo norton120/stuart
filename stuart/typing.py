@@ -1,6 +1,10 @@
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel, Field
+from logging import getLogger
+
+logger = getLogger(__name__)
+
 
 class PypiPackage(BaseModel):
     """Package information from PyPI."""
@@ -13,6 +17,29 @@ class FileImportModel(BaseModel):
     imported: str = Field(description="The module or object being imported")
     from_path: Optional[str] = Field(None, description="Optional source path for the import")
     alias: Optional[str] = Field(None, description="Optional alias for the imported object")
+
+    @classmethod
+    def from_string(cls, import_string: str) -> List["FileImportModel"]:
+        """takes any valid import statement and returns a list of FileImportModel instances"""
+        if "import" not in import_string:
+            logger.warning("Invalid import statement: %s", import_string)
+            return []
+
+        parts = import_string.split("import")
+        from_path = None
+        if "from" in parts[0]:
+            from_path = parts[0].replace("from", "").strip()
+
+        imports = parts[1].strip().split(",")
+        result = []
+        for imp in imports:
+            imp = imp.strip()
+            if " as " in imp:
+                imported, alias = imp.split(" as ")
+                result.append(cls(imported=imported.strip(), from_path=from_path, alias=alias.strip()))
+            else:
+                result.append(cls(imported=imp.strip(), from_path=from_path, alias=None))
+        return result
 
 class FunctionModel(BaseModel):
     """Function definition within a module."""

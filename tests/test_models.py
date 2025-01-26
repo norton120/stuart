@@ -327,3 +327,5 @@ def test_file_import_unique(session, file_factory, file_import_factory):
     # Verify new import was added
     file = session.get(File, file.id)
     assert len(file.imports) == 2
+
+# test_file_import_model_from_string has been moved to test_typing.py
