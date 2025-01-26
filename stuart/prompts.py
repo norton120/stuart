@@ -180,7 +180,7 @@ def _upsert_module(
 @edit_code.tool
 def upsert_module(
     module_path: str | Path,
-    imports: List[tuple[str, str | None, str | None]],
+    imports: List[str],
     description: str | None = None,
 ) -> File:
     """
@@ -194,7 +194,7 @@ def upsert_module(
     Raises:
         ValueError: If module path is invalid
     """
-    import_models = [FileImportModel(**imp) for imp in imports]
+    import_models = [FileImportModel(imp) for imp in imports]
 
     with get_session() as session:
         return _upsert_module(

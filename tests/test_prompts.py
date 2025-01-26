@@ -103,11 +103,11 @@ def test_upsert_function_normalize_path():
 
     assert result.name == "example"
 
-def test_upsert_module_create():
+def test_upsert_module_create(session):
     """Test creating a new module."""
     imports = [
-        {"imported": "typing", "from_path": None},
-        {"imported": "List", "from_path": "typing"}
+        FileImportModel(imported="typing", from_path=None),
+        FileImportModel(imported="List", from_path="typing")
     ]
 
     result = upsert_module(
@@ -116,27 +116,39 @@ def test_upsert_module_create():
         "Common type definitions"
     )
 
+    # Add to session and commit to ensure relationships are loaded
+    session.add(result)
+    session.commit()
+
+    # Get fresh instance from database
+    result = session.get(result.__class__, result.id)
+
     assert result.name.endswith("src/utils/types.py")
     assert result.description == "Common type definitions"
     assert len(result.imports) == 2
 
-def test_upsert_module_update():
+def test_upsert_module_update(session):
     """Test updating an existing module's imports."""
     # Create initial module
     initial = upsert_module(
         "src/utils/types.py",
-        [{"imported": "typing", "from_path": None}],
+        ["import typing"],
         "Type definitions"
     )
+
+    # Get fresh instance
+    initial = session.merge(initial)
 
     # Update imports
     updated = upsert_module(
         "src/utils/types.py",
-        [{"imported": "List", "from_path": "typing"}],
+        ["from typing import List"],
         "Updated type definitions"
     )
+    updated = session.merge(updated)
 
     assert updated.name == initial.name
+    assert updated.id == initial.id
     assert updated.description == "Updated type definitions"
     assert len(updated.imports) == 1
     assert updated.imports[0].imported == "List"
