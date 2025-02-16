@@ -47,3 +47,6 @@ htmlcov/
 
 # Poetry
 poetry.lock
+
+# db for langfuse
+.database

@@ -1,12 +1,36 @@
+from os import environ
 from typing import List, TYPE_CHECKING
 from logging import getLogger
 from requests import get, HTTPError
 from pathlib import Path
-from stuart.typing import PypiPackage, FileImportModel, FunctionModel, ModuleModel
-from stuart.models import File, FNode, FileImport, Base, get_session
+from langfuse.openai import openai
+from langfuse.decorators import observe
+from promptic import Promptic
 
-from litellm import rerank
-from promptic import llm
+from stuart.typing import PypiPackage, FileImportModel, FunctionModel, ModuleModel, CodebaseContextModel
+from stuart.models import File, FNode, FileImport, get_session, Project
+
+
+"""
+() generation
+-> single
+=> loop
+[ ] process
+< > bool
+
+ask -> (break ask into ordered tasks) => code task -> (generate context) -> context -> (generate code) => code
+[ test code ] -> < failure? > (break code into code tasks) ^
+"""
+
+
+
+client = openai.OpenAI(
+  api_key=environ.get("TOGETHER_API_KEY"),
+  base_url="https://api.together.xyz/v1",
+)
+
+promptic = Promptic(openai_client=client)
+
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -22,11 +46,38 @@ logger = getLogger(__name__)
 
 """
 
-@llm(
-        model="gpt-4o",
-        system="Use the provided code editor functions to complete this ask. Call as many functions as needed.",
+
+def generate_context_for_ask(task: str, project:"Project") -> dict:
+    """gets the context elements for the given task"""
+    @observe
+    @promptic.llm(
+            model="mistralai/Mixtral-8x7B-Instruct-v0.1",
+            system="""
+    // given the assigned task and the function tree, select which functions, schemas, and constants (if any) would be relevant to the task
+    """
+    )
+    def select_context(task: str) -> CodebaseContextModel:
+        """task: {task}
+
+        tree:
+        """ + project.tree
+
+
+
+
+@observe
+@promptic.llm(
+        model="mistralai/Mixtral-8x7B-Instruct-v0.1",
+        system="""
+// general directions
+// code rules
+// tree output
+// code for code in selected_functions
+
+
+""",
 )
-def edit_code(ask: str):
+def cycle(ask: str):
     """{ask}"""
 
 def get_pypi_package(package_name: str) -> PypiPackage:
@@ -67,31 +118,25 @@ def get_pypi_package(package_name: str) -> PypiPackage:
 
 def _upsert_function(
     session: "Session",
-    module_path: str | Path,
+    file_name: str,
     function_name: str,
-    imports: List[FileImportModel],
+    imports: List[str],
     description: str,
     return_type: str,
     code: str
 ) -> None:
     """Internal implementation of upsert_function with session management."""
-    logger.info("Upserting function %s in module %s", function_name, module_path)
-
-    # Normalize path and use as name for file lookup
-    module_path = Path(module_path)
-    if not str(module_path).endswith('.py'):
-        module_path = module_path.with_suffix('.py')
+    logger.info("Upserting function %s in module %s", function_name, file_name)
 
     # Get or create file using module_path as name
     file, _ = File.get_or_create(
         session,
-        name=str(module_path),
-        suffix='.py',
-        description=f"Module containing {function_name}"
+        name=file_name.strip()
     )
 
     for import_ in imports:
-        file.imports.append(FileImport(**import_.model_dump()))
+        import_ = FileImport(**import_.model_dump())
+        file.imports.append(import_)
 
     # Update function using combination of file_id and name
     function_, _ = FNode.upsert(
@@ -108,11 +153,11 @@ def _upsert_function(
     return function_
 
 
-@edit_code.tool
-def upsert_function(
-    module_path: str | Path,
+@cycle.tool
+def create_or_edit_function(
+    file_name: str | Path,
     function_name: str,
-    imports: List[dict],  # Changed from List[FileImportModel] to List[dict]
+    imports: List[str],  # Changed from List[FileImportModel] to List[dict]
     description: str,
     return_type: str,
     code: str
@@ -121,86 +166,26 @@ def upsert_function(
     Create or update a function definition in the specified module.
 
     Args:
-        module_path: Path to the module containing the function
-        function_name: Name of the function to create/update
-        imports: List of strings containing import statements
-        description: Function docstring/description
+        file_name: the file where this function is defined
+        function_name: the name of the function being created/updated
+        imports: List of strings containing import statements your function needs
+        description: the description of the function
         return_type: Return type annotation for the function
-        code: Function implementation code
+        code: the definition (source code) of the function
 
     Raises:
-        ValueError: If module path or function name is invalid
+        ValueError: If the function definition is invalid
     """
     import_models = [i for imp in imports for i in FileImportModel.from_string(imp)]
 
     with get_session() as session:
         return _upsert_function(
             session=session,
-            module_path=module_path,
+            module_path=file_name,
             function_name=function_name,
             imports=import_models,
             description=description,
             return_type=return_type,
             code=code
-        )
-
-def _upsert_module(
-    session: "Session",
-    module_path: str | Path,
-    imports: List[FileImportModel],
-    description: str | None = None,
-) -> File:
-    """Internal implementation of upsert_module with session management."""
-    logger.info("Upserting module %s", module_path)
-
-    # Normalize path
-    module_path = Path(module_path)
-    if not str(module_path).endswith('.py'):
-        module_path = module_path.with_suffix('.py')
-
-    # Get or create file, and update its description
-    file, _ = File.upsert(
-        session,
-        name=str(module_path),
-        suffix='.py',
-        description=description or f"Module at {module_path}"
-    )
-
-    # Clear existing imports if any
-    file.imports.clear()
-
-    # Add new imports
-    for import_ in imports:
-        file.imports.append(FileImport(**import_.model_dump()))
-
-    session.commit()
-    session.refresh(file)
-    return file
-
-@edit_code.tool
-def upsert_module(
-    module_path: str | Path,
-    imports: List[str],
-    description: str | None = None,
-) -> File:
-    """
-    Create or update a module file with imports.
-
-    Args:
-        module_path: Path to the module file
-        imports: List of tuples containing imports (name_of_import, import_from, alias,)
-        description: Optional description of the module's purpose
-
-    Raises:
-        ValueError: If module path is invalid
-    """
-    import_models = [i for imp in imports for i in FileImportModel.from_string(imp)]
-
-    with get_session() as session:
-        return _upsert_module(
-            session=session,
-            module_path=module_path,
-            imports=import_models,
-            description=description,
         )
 

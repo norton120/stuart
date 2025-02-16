@@ -86,3 +86,9 @@ class ModuleModel(BaseModel):
     name: str = Field(description="Full path of the module file")
     description: Optional[str] = Field(None, description="Description of the module's purpose")
     imports: List[FileImportModel] = Field(default_factory=list, description="Import statements in the module")
+
+class CodebaseContextModel(BaseModel):
+    """Code elements - functions, types, and constants - that pertain to a given task."""
+    functions: List[str] = Field(default_factory=list, description="qualified function names to include in the context", examples=[["module1.function1", "module2.function2"]])
+    types: List[str] = Field(default_factory=list, description="Type definition names (pydantic models) to include in the context", examples=["Type1Model", "Type2Model"])
+    constants: List[str] = Field(default_factory=list, description="Existing named constants to include in the context", examples=["CONSTANT1", "CONSTANT2"])

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Any, Type, TypeVar, cast
+from typing import Optional, Any, Type, TypeVar, cast, Callable
 import logging
 from pathlib import Path
 from datetime import datetime, UTC
@@ -7,6 +7,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship,
 from sqlalchemy import String, Text, DateTime, event, ForeignKey, Column, Integer, UniqueConstraint, select, create_engine
 from sqlalchemy.dialects.sqlite import insert
 from treelib import Tree
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,18 @@ def get_session() -> Session:
     SessionLocal = sessionmaker(bind=engine)
     return SessionLocal()
 
+class ProgrammingLanguage(Enum):
+    PYTHON = "Python"
+    JAVASCRIPT = "JavaScript"
+    JAVA = "Java"
+    CSHARP = "C#"
+    CPP = "C++"
+    RUBY = "Ruby"
+    GO = "Go"
+    SWIFT = "Swift"
+    KOTLIN = "Kotlin"
+    PHP = "PHP"
+
 class Project(Base):
     """The software project that is being updated or maintained.
     """
@@ -121,6 +134,9 @@ class Project(Base):
         doc="Name of the project")
     description: Mapped[Optional[str]] = mapped_column(Text,
         doc="General description of the project's purpose and goals")
+    primary_programming_language: Mapped[ProgrammingLanguage] = mapped_column(String(50),
+        nullable=False,
+        doc="Primary programming language used in the project")
     architectural_description: Mapped[Optional[str]] = mapped_column(Text,
         doc="Description of the project's architectural design and patterns")
     current_state: Mapped[Optional[str]] = mapped_column(String, doc="Any current condition of the project as it pertains to development.")
@@ -165,6 +181,67 @@ class Project(Base):
 
         return tree.show(stdout=False)
 
+    def render_package(self, session: Session, root_path: Optional[str | Path]=None) -> None:
+        """
+        Render a Python package from the models in the database.
+
+        Args:
+            session: SQLAlchemy session containing the models
+            root_path: the root directory where the package should be rendered, defaults to current directory
+        """
+        if not self.primary_programming_language == ProgrammingLanguage.PYTHON:
+            raise NotImplementedError("Only Python packages are supported for rendering at this time")
+        root = Path(root_path or ".").resolve()
+        logger.info("Rendering Python package at %s", root)
+        src = root / "src"
+        src.mkdir(parents=True, exist_ok=True)
+
+        for model_ in (
+            (CNode, lambda x : f"{x.name.upper()} = {x.value}", src / "constants.py",),
+            (Typing, lambda x : x.body, src / "typings.py",),
+            (File, self._render_functions, src / File.name,),
+        ):
+            self._render_model(session, *model_)
+        logger.info("Package rendering complete")
+
+    @classmethod
+    def _render_functions(cls, file: File) -> str:
+        filebody = []
+
+        for imp in file.imports:
+            filebody.append(str(imp))
+
+        for func in file.functions:
+            filebody.append(func.body)
+        return "\n".join(filebody)
+
+    @classmethod
+    def _render_model(cls, session: "Session",
+                    model: Type[Base],
+                    render_formatter: Callable,
+                    file:Path) -> int:
+        """renders the elements of a given model
+
+        Args:
+            session (Session): The SQLAlchemy session
+            model (Type[Base]): The model to render
+            render_formatter (Callable): The formatting function to render each element
+            file (Path): The file to write the rendered elements
+        Returns:
+            int: Number of characters rendered into the target file
+        """
+        elements = session.query(model).all()
+        if not elements:
+            logger.info("No %s to render, skipping", model.__name__)
+            return 0
+
+        logger.info("Rendering %d %s", len(elements), model.__name__)
+        file_body = []
+        for element in elements:
+            file_body.append(render_formatter(element))
+        file.write_text("\n".join(file_body))
+
+
 class File(Base):
     """A file in the project's codebase.
     """
@@ -172,12 +249,7 @@ class File(Base):
 
     name: Mapped[str] = mapped_column(String(255),
         nullable=False, unique=True, index=True,
-        doc="Full path of the file relative to project root")
-    suffix: Mapped[str] = mapped_column(String(32),
-        nullable=False, index=True,
-        doc="File extension (e.g. '.py', '.js', '.md')")
-    description: Mapped[Optional[str]] = mapped_column(Text,
-        doc="Description of the file's purpose and contents")
+        doc="path to the file relative to the project root")
     functions: Mapped[list["FNode"]] = relationship("FNode", back_populates="file",
         cascade="all, delete-orphan")
     imports: Mapped[list["FileImport"]] = relationship("FileImport", back_populates="file", cascade="all, delete-orphan")
@@ -235,7 +307,6 @@ class FileImport(Base):
     """Model representing import statements in a file."""
     __tablename__ = "file_imports"
 
-    id = Column(Integer, primary_key=True)
     file_id = Column(Integer, ForeignKey("file.id"), nullable=False)
     imported = Column(String, nullable=False)
     from_path = Column(String, nullable=True)
@@ -258,58 +329,3 @@ class FileImport(Base):
             statement += f" as {self.alias}"
         return statement
 
-def render_package(session: Session, root_path: str | Path) -> None:
-    """
-    Render a Python package from the models in the database.
-
-    Args:
-        session: SQLAlchemy session containing the models
-        root_path: Path to the project root directory
-    """
-    root = Path(root_path).resolve()
-    logger.info("Rendering Python package at %s", root)
-    root.mkdir(parents=True, exist_ok=True)
-
-    # Render typings file
-    typings = session.query(Typing).all()
-    if typings:
-        logger.info("Rendering %d type definitions", len(typings))
-        typings_file = root / "typings.py"
-        typings_file.write_text(
-            "\"\"\"Type definitions for the project.\"\"\"\n\n" +
-            "".join(
-                f"# {typing.description}\n{typing.body}\n\n"
-                for typing in typings
-            )
-        )
-
-    # Render constants file
-    constants = session.query(CNode).all()
-    if constants:
-        logger.info("Rendering %d constants", len(constants))
-        constants_file = root / "constants.py"
-        constants_file.write_text(
-            "\"\"\"Project constants.\"\"\"\n\n" +
-            "".join(f"{const.name.upper()} = {const.value}\n" for const in constants)
-        )
-
-    # Render individual files with their functions
-    for file in session.query(File).all():
-        logger.info("Rendering file %s", file.name)
-        file_path = root / file.name
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        content = [
-            *[f"{imp}\n" for imp in file.imports],
-            "\n" if file.imports else "",
-            f"\"\"\"{file.description}\"\"\"\n\n" if file.description else "",
-            *[
-                f"{f'\"\"\"{func.description}\"\"\"\n' if func.description else ''}"
-                f"{func.body}\n\n"
-                for func in file.functions
-            ]
-        ]
-
-        file_path.write_text("".join(content))
-
-    logger.info("Package rendering complete")
