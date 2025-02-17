@@ -73,3 +73,12 @@ First up is completing the elements described above so they actually do what is 
 
 This is what every AI coding agent feels like to me at some level.
 </details>
+
+
+### Things Stuart must learn to do (needed processes):
+- log the heck out of things to allow for Stuart to debug effectively
+- consume logs in the debug process
+- run tests
+  - we need a non-infinate loop and an exit to ask for human assistance
+- get external references (pip readme, documentation, error search results)
+- Refactor: find duplication, buried logic, magic numbers etc and plan tasks to fix them

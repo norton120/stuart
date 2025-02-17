@@ -8,6 +8,7 @@ from sqlalchemy import String, Text, DateTime, event, ForeignKey, Column, Intege
 from sqlalchemy.dialects.sqlite import insert
 from treelib import Tree
 from enum import Enum
+import ast
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,7 @@ class Base(DeclarativeBase):
 def get_session() -> Session:
     """Get a database session for stuart."""
     # Add session management
-    engine = create_engine("sqlite:///stuart.db")
+    engine = create_engine("sqlite:///./stuart.db")
     Base.metadata.create_all(engine)
     SessionLocal = sessionmaker(bind=engine)
     return SessionLocal()
@@ -140,6 +141,8 @@ class Project(Base):
     architectural_description: Mapped[Optional[str]] = mapped_column(Text,
         doc="Description of the project's architectural design and patterns")
     current_state: Mapped[Optional[str]] = mapped_column(String, doc="Any current condition of the project as it pertains to development.")
+    rendered_timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime,
+        doc="Timestamp when the project was last rendered")
 
     def tree(self, session: Session) -> str:
         """
@@ -202,6 +205,10 @@ class Project(Base):
             (File, self._render_functions, src / File.name,),
         ):
             self._render_model(session, *model_)
+
+        # Update rendered_timestamp
+        self.rendered_timestamp = datetime.now(UTC)
+        session.commit()
         logger.info("Package rendering complete")
 
     @classmethod
@@ -241,6 +248,74 @@ class Project(Base):
             file_body.append(render_formatter(element))
         file.write_text("\n".join(file_body))
 
+    def extract_changes(self, session: Session, root_path: Optional[str | Path]=None) -> list[str]:
+        """
+        Extract changes from the rendered package and apply them to the project functions, typings, and constants in the database.
+
+        Args:
+            session: SQLAlchemy session containing the models
+            root_path: the root directory where the package is rendered, defaults to current directory
+
+        Returns:
+            List of informative strings about created or updated elements
+        """
+        root = Path(root_path or ".").resolve()
+        src = root / "src"
+        if not src.exists():
+            logger.warning("Source directory %s does not exist", src)
+            return []
+
+        for file_path in src.glob("**/*.py"):
+            if file_path.stat().st_mtime <= self.rendered_timestamp.timestamp():
+                continue
+
+            with file_path.open("r") as file:
+                tree = ast.parse(file.read(), filename=str(file_path))
+
+            for node in tree.body:
+                if isinstance(node, ast.FunctionDef):
+                    created = self._upsert_function(session, file_path, node)
+                    yield f"function {file_path.stem}.{node.name} was {'created' if created else 'updated'}"
+                elif isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name):
+                    created = self._upsert_constant(session, node)
+                    yield f"constant {node.targets[0].id} was {'created' if created else 'updated'}"
+                elif isinstance(node, ast.ClassDef) and any(base.id == "BaseModel" for base in node.bases if isinstance(base, ast.Name)):
+                    created = self._upsert_typing(session, node)
+                    yield f"typing {node.name} was {'created' if created else 'updated'}"
+
+        session.commit()
+        logger.info("Changes extracted and applied to the database")
+
+    def _upsert_function(self, session: Session, file_path: Path, node: ast.FunctionDef) -> bool:
+        """Upsert a function in the database."""
+        file = session.query(File).filter_by(name=str(file_path.relative_to("src"))).first()
+        if not file:
+            file = File(name=str(file_path.relative_to("src")))
+            session.add(file)
+            session.flush()
+
+        function, created = FNode.get_or_create(session, file_id=file.id, name=node.name)
+        function.body = ast.unparse(node)
+        session.add(function)
+        return created
+
+    def _upsert_constant(self, session: Session, node: ast.Assign) -> bool:
+        """Upsert a constant in the database."""
+        name = node.targets[0].id
+        value = ast.unparse(node.value)
+        constant, created = CNode.get_or_create(session, name=name)
+        constant.value = value
+        session.add(constant)
+        return created
+
+    def _upsert_typing(self, session: Session, node: ast.ClassDef) -> bool:
+        """Upsert a typing in the database."""
+        name = node.name
+        body = ast.unparse(node)
+        typing, created = Typing.get_or_create(session, name=name)
+        typing.body = body
+        session.add(typing)
+        return created
 
 class File(Base):
     """A file in the project's codebase.
