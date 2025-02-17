@@ -2,7 +2,7 @@ from typing import Optional
 import click
 import logging
 from click import style
-from .prompts import edit_code
+from .prompts import generate_tasks
 from .models import get_session, Project
 
 logger = logging.getLogger(__name__)
@@ -43,12 +43,16 @@ def cli(ctx: click.Context) -> None:
 @cli.command()
 @click.argument('name', type=str)
 @click.argument('primary_language', type=str, default="Python")
+@click.option('--description', type=str, default=None)
 @click.pass_obj
-def init(obj: StuartCLI, name: str, primary_language: str) -> None:
+def init(obj: StuartCLI, name: str, primary_language: str, description: Optional[str] = None) -> None:
     """Initialize a new project."""
     logger.info("Initializing new project")
     session = get_session()
-    project, created = Project.get_or_create(session, name=name, primary_programming_language=primary_language)
+    project, created = Project.get_or_create(session,
+                                             name=name,
+                                             description=description or "",
+                                             primary_programming_language=primary_language)
     if created:
         session.commit()
         click.echo(f"Project '{name}' created successfully.")
@@ -58,18 +62,16 @@ def init(obj: StuartCLI, name: str, primary_language: str) -> None:
 @cli.command()
 @click.argument('prompt_text', type=str)
 @click.pass_context
-def prompt(ctx: click.Context, prompt_text: str) -> None:
+def ask(ctx: click.Context, prompt_text: str) -> None:
     """Execute a prompt-based task."""
-    logger.info("Starting prompt execution")
-    click.echo(f"Executing prompt: {prompt_text}")
-
-    if click.confirm("Do you want to proceed?", default=True):
-        try:
-            ctx.obj.execute_prompt(prompt_text)
-        except Exception as e:
-            logger.error(f"Failed to process prompt: {e}", exc_info=True)
-            click.echo(f"Error: {e}", err=True)
-            raise click.Abort()
+    try:
+        tasks = generate_tasks(prompt_text, ctx.obj.project)
+        for task in tasks:
+            click.echo(style(f"- {task}", fg="green"))
+    except Exception as e:
+        logger.error(f"Failed to process prompt: {e}", exc_info=True)
+        click.echo(f"Error: {e}", err=True)
+        raise click.Abort()
 
 @cli.command()
 @click.pass_context

@@ -51,7 +51,7 @@ def generate_tasks(ask: str, project: Project) -> List[str]:
     """Breaks down the ask into ordered tasks"""
     @observe
     @promptic.llm(
-            model="mistralai/Mixtral-8x7B-Instruct-v0.1",
+            model="deepseek-ai/DeepSeek-R1",
             system=f"""Break the users request into very detailed and totally self-contained software programming CODING tasks, to be completed by a coding robot.
 
 Here are details of the project in question:
@@ -69,6 +69,8 @@ Finally, return the list of tasks as JSON list of objects with keys title and bo
     raw_with_thoughts = break_ask_into_ordered_tasks(ask)
     json_ = raw_with_thoughts.split("```json")[1].split("```")[0]
     tasks = json.loads(json_)
+    print(tasks)
+    return
     for task in tasks:
         ## for each task, complete the entire cycle.
         # 1. generate context
