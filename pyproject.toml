@@ -10,9 +10,10 @@ sqlalchemy = "~=2.0.37"
 click = "~=8.1"
 requests = "^2.31.0"
 pydantic = "^2.6.1"
-promptic = "^5.1.1"
+promptic = "^5.4.0"
 langfuse = "^2.57.13"
 treelib = "^1.7.0"
+pydantic_settings = "^2.8.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"

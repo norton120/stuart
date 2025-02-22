@@ -10,6 +10,7 @@ stuart/
 ├── stuart/
 │   ├── __init__.py
 │   ├── cli.py
+│   ├── client.py
 │   ├── models.py
 │   ├── prompts.py
 │   └── typing.py

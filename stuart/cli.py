@@ -16,15 +16,9 @@ class StuartCLI:
     def _setup_logging(self) -> None:
         """Configure logging for the CLI."""
         logging.basicConfig(
-            level=logging.INFO,
+            level=logging.DEBUG,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
-
-    def execute_prompt(self, prompt_text: str) -> None:
-        """Execute the given prompt."""
-        logger.debug("Processing prompt...")
-        edit_code(prompt_text)
-        click.echo("Processing...")
 
 @click.group()
 @click.pass_context

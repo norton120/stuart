@@ -10,6 +10,8 @@ from promptic import Promptic
 
 from stuart.typing import PypiPackage, FileImportModel, FunctionModel, ModuleModel, CodebaseContextModel
 from stuart.models import File, FNode, FileImport, get_session, Project
+from stuart.client import REASONING_CLIENT, CODING_CLIENT
+from stuart.settings import settings
 
 
 """
@@ -23,14 +25,8 @@ ask -> (break ask into ordered tasks) => code task -> (generate context) -> cont
 [ test code ] -> < failure? > (break code into code tasks) ^
 """
 
-
-
-client = openai.OpenAI(
-  api_key=environ.get("TOGETHER_API_KEY"),
-  base_url="https://api.together.xyz/v1",
-)
-
-promptic = Promptic(openai_client=client)
+reasoning = Promptic(openai_client=REASONING_CLIENT, model=settings.reasoning_client_model)
+coding = Promptic(openai_client=CODING_CLIENT, model=settings.coding_client_model)
 
 
 if TYPE_CHECKING:
@@ -49,9 +45,12 @@ logger = getLogger(__name__)
 
 def generate_tasks(ask: str, project: Project) -> List[str]:
     """Breaks down the ask into ordered tasks"""
+    logger.info("Starting task generation for ask: %s", ask)
+    logger.debug("Project details: name=%s, description=%s, current_state=%s, primary_programming_language=%s",
+                 project.name, project.description, project.current_state, project.primary_programming_language)
+
     @observe
-    @promptic.llm(
-            model="deepseek-ai/DeepSeek-R1",
+    @reasoning.llm(
             system=f"""Break the users request into very detailed and totally self-contained software programming CODING tasks, to be completed by a coding robot.
 
 Here are details of the project in question:
@@ -67,30 +66,44 @@ Finally, return the list of tasks as JSON list of objects with keys title and bo
         """{ask}"""
 
     raw_with_thoughts = break_ask_into_ordered_tasks(ask)
-    json_ = raw_with_thoughts.split("```json")[1].split("```")[0]
-    tasks = json.loads(json_)
-    print(tasks)
+    logger.debug("Raw response from LLM: %s", raw_with_thoughts)
+
+    try:
+        json_ = raw_with_thoughts.split("```json")[1].split("```")[0]
+        tasks = json.loads(json_)
+        logger.info("Successfully parsed tasks from LLM response")
+        return tasks
+    except (IndexError, json.JSONDecodeError) as e:
+        logger.error("Failed to parse tasks from LLM response: %s", str(e))
+        raise
+
+    logger.debug("Generated tasks: %s", tasks)
     return
     for task in tasks:
-        ## for each task, complete the entire cycle.
+        logger.info("Processing task: %s", task["title"])
         # 1. generate context
         context = generate_context_for_task(task["title"], project)
+        logger.debug("Generated context for task %s: %s", task["title"], context)
         # 2. generate the code changes
         code = generate_code_for_task(task["title"], context)
+        logger.debug("Generated code for task %s: %s", task["title"], code)
         # 3. render the codebase
         project.render_package()
+        logger.info("Rendered package for task %s", task["title"])
         # 4. run localized tests, fix if they fail
         while not project.run_tests(code):
+            logger.warning("Tests failed for task %s, regenerating code", task["title"])
             subcode = generate_code_for_task(task["title"], context)
+            logger.debug("Regenerated code for task %s: %s", task["title"], subcode)
         # 5. refactor the codebase
         project.refactor_package(code)
         project.render_package(subcode)
+        logger.info("Completed task %s", task["title"])
 
 def generate_context_for_task(task: str, project:"Project") -> dict:
     """gets the context elements for the given task"""
     @observe
-    @promptic.llm(
-            model="mistralai/Mixtral-8x7B-Instruct-v0.1",
+    @reasoning.llm(
             system="""
     // given the assigned task and the function tree, select which functions, schemas, and constants (if any) would be relevant to the task
     """
@@ -105,8 +118,7 @@ def generate_context_for_task(task: str, project:"Project") -> dict:
 
 
 @observe
-@promptic.llm(
-        model="mistralai/Mixtral-8x7B-Instruct-v0.1",
+@coding.llm(
         system="""
 // general directions
 // code rules
